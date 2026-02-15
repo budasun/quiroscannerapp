@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 
+export const maxDuration = 60;
+
 const MODELS = [
+    'meta-llama/llama-3.2-11b-vision-instruct:free',
     'meta-llama/llama-3.1-70b-instruct',
     'meta-llama/llama-3.1-8b-instruct',
 ];
@@ -75,6 +78,18 @@ export async function POST(req: NextRequest) {
         for (const model of MODELS) {
             try {
                 console.log(`Intentando con modelo: ${model}`);
+
+                let userContent;
+                if (model.includes('vision')) {
+                    userContent = [
+                        { type: "text", text: 'El usuario ha enviado fotos de ambas manos (izquierda y derecha). Realiza un diagnóstico completo basado en los principios de Wang Chenxia y la Psicología Integral de Ken Wilber. Genera valores realistas y variados para los niveles de radar. Responde estrictamente en formato JSON.' },
+                        { type: "image_url", image_url: { url: leftHand } },
+                        { type: "image_url", image_url: { url: rightHand } }
+                    ];
+                } else {
+                    userContent = 'El usuario ha enviado fotos de ambas manos (izquierda y derecha). Realiza un diagnóstico completo basado en los principios de Wang Chenxia y la Psicología Integral de Ken Wilber. Genera valores realistas y variados para los niveles de radar. Responde estrictamente en formato JSON.';
+                }
+
                 const response = await fetchWithTimeout('https://openrouter.ai/api/v1/chat/completions', {
                     method: 'POST',
                     headers: {
@@ -92,12 +107,12 @@ export async function POST(req: NextRequest) {
                             },
                             {
                                 role: 'user',
-                                content: 'El usuario ha enviado fotos de ambas manos (izquierda y derecha). Realiza un diagnóstico completo basado en los principios de Wang Chenxia y la Psicología Integral de Ken Wilber. Genera valores realistas y variados para los niveles de radar. Responde estrictamente en formato JSON.',
+                                content: userContent,
                             },
                         ],
                         // Algunos modelos gratuitos pueden fallar con response_format, así que lo manejamos con el prompt
                     }),
-                    timeout: 30000,
+                    timeout: 45000, // Increased timeout for vision
                 });
 
                 if (!response.ok) {

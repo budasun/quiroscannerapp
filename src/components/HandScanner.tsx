@@ -15,20 +15,55 @@ export default function HandScanner({ onAnalyze, isLoading }: HandScannerProps) 
     const leftInputRef = useRef<HTMLInputElement>(null);
     const rightInputRef = useRef<HTMLInputElement>(null);
 
-    const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>, side: 'left' | 'right') => {
+    const resizeImage = (file: File): Promise<string> => {
+        return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.readAsDataURL(file);
+            reader.onload = (event) => {
+                const img = new Image();
+                img.src = event.target?.result as string;
+                img.onload = () => {
+                    const canvas = document.createElement('canvas');
+                    const MAX_WIDTH = 1024;
+                    const MAX_HEIGHT = 1024;
+                    let width = img.width;
+                    let height = img.height;
+
+                    if (width > height) {
+                        if (width > MAX_WIDTH) {
+                            height *= MAX_WIDTH / width;
+                            width = MAX_WIDTH;
+                        }
+                    } else {
+                        if (height > MAX_HEIGHT) {
+                            width *= MAX_HEIGHT / height;
+                            height = MAX_HEIGHT;
+                        }
+                    }
+                    canvas.width = width;
+                    canvas.height = height;
+                    const ctx = canvas.getContext('2d');
+                    ctx?.drawImage(img, 0, 0, width, height);
+                    resolve(canvas.toDataURL('image/jpeg', 0.8));
+                };
+                img.onerror = (error) => reject(error);
+            };
+            reader.onerror = (error) => reject(error);
+        });
+    };
+
+    const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>, side: 'left' | 'right') => {
         const file = e.target.files?.[0];
         if (file) {
-            // Limit file size to 4MB for API safety
-            if (file.size > 4 * 1024 * 1024) {
-                alert("La imagen es demasiado grande. Por favor sube una de menos de 4MB.");
-                return;
+            try {
+                // Resize and compress image
+                const resizedImage = await resizeImage(file);
+                if (side === 'left') setLeftHand(resizedImage);
+                else setRightHand(resizedImage);
+            } catch (error) {
+                console.error("Error processing image:", error);
+                alert("Hubo un error al procesar la imagen. Intenta con otra.");
             }
-            const reader = new FileReader();
-            reader.onloadend = () => {
-                if (side === 'left') setLeftHand(reader.result as string);
-                else setRightHand(reader.result as string);
-            };
-            reader.readAsDataURL(file);
         }
     };
 

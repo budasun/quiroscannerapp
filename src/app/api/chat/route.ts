@@ -1,7 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 
+export const maxDuration = 60;
+
 // Modelos Llama 3.1 para el Maestro Kong
 const LLAMA_MODELS = [
+    'meta-llama/llama-3.2-11b-vision-instruct:free',
     'meta-llama/llama-3.1-70b-instruct',
     'meta-llama/llama-3.1-8b-instruct',
 ];
