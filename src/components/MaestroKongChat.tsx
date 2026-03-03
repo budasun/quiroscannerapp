@@ -4,7 +4,6 @@ import React, { useState, useRef, useEffect } from 'react';
 import { Send, MessageSquare, Sparkles, Scroll, BookOpen, Download, Loader2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ChatMessage, DiagnosisResult } from '@/types';
-// Usamos la versión PRO para soportar colores oklab de Tailwind modernos
 import html2canvas from 'html2canvas-pro';
 import jsPDF from 'jspdf';
 
@@ -32,16 +31,16 @@ export default function MaestroKongChat({ diagnosis, handImages }: MaestroKongCh
     const [isLoading, setIsLoading] = useState(false);
     const [isExporting, setIsExporting] = useState(false);
 
-    // Referencias para el contenedor y el scroll inteligente
     const scrollRef = useRef<HTMLDivElement>(null);
     const contentRef = useRef<HTMLDivElement>(null);
     const lastMessageRef = useRef<HTMLDivElement>(null);
 
-    // Scroll Inteligente: Se alinea al inicio si habla el Maestro, al final si hablas tú
+    // Scroll Inteligente
     useEffect(() => {
         if (lastMessageRef.current && messages.length > 0) {
             const lastMsg = messages[messages.length - 1];
-            // 'start' nos deja ver el inicio de la lectura, 'end' nos baja al último mensaje corto
+            // Si el Maestro habla (mensaje largo), alineamos la vista al inicio.
+            // Si el usuario habla, alineamos al final naturalmente.
             const scrollBehavior = lastMsg.role === 'assistant' ? 'start' : 'end';
             lastMessageRef.current.scrollIntoView({ behavior: 'smooth', block: scrollBehavior });
         }
@@ -51,138 +50,132 @@ export default function MaestroKongChat({ diagnosis, handImages }: MaestroKongCh
         if (!contentRef.current || isExporting) return;
 
         setIsExporting(true);
-
         let tempExportElement: HTMLElement | null = null;
-        let pdfStyle: HTMLStyleElement | null = null;
 
         try {
+            // Esperar a que terminen las animaciones
             await new Promise(resolve => setTimeout(resolve, 800));
-            const originalElement = contentRef.current;
             const isMobile = window.innerWidth < 768;
 
-            // ── Contenedor off-screen seguro para móviles (Nunca usar left: -9999px) ──
+            // ── Contenedor off-screen (Documento Limpio) ──
             tempExportElement = document.createElement('div');
-            tempExportElement.style.width = isMobile ? '600px' : '900px';
+            tempExportElement.style.width = isMobile ? '700px' : '900px';
             tempExportElement.style.backgroundColor = '#050510';
-            tempExportElement.style.padding = '30px';
-            tempExportElement.style.position = 'absolute'; // Usamos absolute, no fixed
+            tempExportElement.style.padding = '40px';
+            tempExportElement.style.position = 'absolute';
             tempExportElement.style.top = '0';
             tempExportElement.style.left = '0';
-            tempExportElement.style.zIndex = '-1000'; // Escondido detrás del fondo visible
+            tempExportElement.style.zIndex = '-1000';
             tempExportElement.style.fontFamily = 'system-ui, sans-serif';
             document.body.appendChild(tempExportElement);
 
+            // ── Título del documento ──
             const titleEl = document.createElement('div');
             titleEl.style.textAlign = 'center';
-            titleEl.style.marginBottom = '20px';
+            titleEl.style.marginBottom = '30px';
             titleEl.innerHTML = `
-                <h1 style="color:#8b5cf6;font-size:24px;font-weight:900;margin:0;letter-spacing:2px;">TAO HEALTH SCANNER PRO</h1>
-                <p style="color:#9ca3af;font-size:12px;margin:6px 0 0;">Diagnóstico Integral · ${new Date().toLocaleDateString('es-ES', { day: '2-digit', month: 'long', year: 'numeric' })}</p>
-                <hr style="border:none;border-top:1px solid rgba(139,92,246,0.3);margin:16px 0;">
+                <h1 style="color:#8b5cf6;font-size:28px;font-weight:900;margin:0;letter-spacing:2px;">TAO HEALTH SCANNER PRO</h1>
+                <p style="color:#9ca3af;font-size:14px;margin:8px 0 0;">Diagnóstico Integral · ${new Date().toLocaleDateString('es-ES', { day: '2-digit', month: 'long', year: 'numeric' })}</p>
+                <hr style="border:none;border-top:1px solid rgba(139,92,246,0.3);margin:24px 0;">
             `;
             tempExportElement.appendChild(titleEl);
 
+            // ── Fotos originales de las manos (Sin aplastar) ──
             if (handImages?.left && handImages?.right) {
                 const imagesContainer = document.createElement('div');
                 imagesContainer.style.display = 'flex';
-                imagesContainer.style.justifyContent = 'space-around';
+                imagesContainer.style.justifyContent = 'space-between';
                 imagesContainer.style.gap = '20px';
-                imagesContainer.style.marginBottom = '24px';
-                imagesContainer.style.padding = '16px';
-                imagesContainer.style.backgroundColor = 'rgba(255,255,255,0.03)';
-                imagesContainer.style.borderRadius = '16px';
-                imagesContainer.style.border = '1px solid rgba(139,92,246,0.2)';
+                imagesContainer.style.marginBottom = '40px';
 
                 const makeImgWrapper = (src: string, label: string) => {
                     const wrap = document.createElement('div');
                     wrap.style.textAlign = 'center';
                     wrap.style.flex = '1';
+                    wrap.style.backgroundColor = 'rgba(255,255,255,0.03)';
+                    wrap.style.padding = '16px';
+                    wrap.style.borderRadius = '16px';
+                    wrap.style.border = '1px solid rgba(139,92,246,0.2)';
+
                     const img = document.createElement('img');
                     img.src = src;
                     img.crossOrigin = 'anonymous';
                     img.style.width = '100%';
-                    img.style.maxWidth = '380px';
-                    img.style.height = '280px';
-                    img.style.objectFit = 'cover';
-                    img.style.borderRadius = '12px';
-                    img.style.display = 'block';
-                    img.style.margin = '0 auto 8px';
+                    img.style.height = 'auto';
+                    img.style.maxHeight = '350px';
+                    img.style.objectFit = 'contain';
+                    img.style.borderRadius = '8px';
+                    img.style.marginBottom = '12px';
+
                     const lbl = document.createElement('p');
                     lbl.textContent = label;
                     lbl.style.color = '#9ca3af';
-                    lbl.style.fontSize = '11px';
+                    lbl.style.fontSize = '12px';
                     lbl.style.fontWeight = 'bold';
-                    lbl.style.letterSpacing = '2px';
+                    lbl.style.letterSpacing = '1px';
                     lbl.style.textTransform = 'uppercase';
                     lbl.style.margin = '0';
+
                     wrap.appendChild(img);
                     wrap.appendChild(lbl);
                     return wrap;
                 };
 
-                imagesContainer.appendChild(makeImgWrapper(handImages.left, '🖐 Izquierda (Ancestral)'));
-                imagesContainer.appendChild(makeImgWrapper(handImages.right, '✋ Derecha (Actual)'));
+                imagesContainer.appendChild(makeImgWrapper(handImages.left, '🖐 Izquierda (Yin · Ancestral)'));
+                imagesContainer.appendChild(makeImgWrapper(handImages.right, '✋ Derecha (Yang · Actual)'));
                 tempExportElement.appendChild(imagesContainer);
             }
 
-            const cloned = originalElement.cloneNode(true) as HTMLElement;
-            cloned.style.width = '100%';
-            cloned.style.height = 'auto';
-            cloned.style.overflow = 'visible';
-            cloned.style.position = 'static';
-            const scrollArea = cloned.querySelector('[class*="overflow-y-auto"]') as HTMLElement;
-            if (scrollArea) {
-                scrollArea.style.overflow = 'visible';
-                scrollArea.style.height = 'auto';
-                scrollArea.style.maxHeight = 'none';
-            }
-            tempExportElement.appendChild(cloned);
+            // ── Generación de Mensajes (Texto perfecto, sin botones UI) ──
+            const chatContainer = document.createElement('div');
+            chatContainer.style.display = 'flex';
+            chatContainer.style.flexDirection = 'column';
+            chatContainer.style.gap = '24px';
 
-            pdfStyle = document.createElement('style');
-            pdfStyle.id = 'pdf-export-style';
-            pdfStyle.textContent = `
-                * { animation: none !important; transition: none !important; animation-duration: 0s !important; }
-                .text-primary, [class*="text-primary"] { color: #8b5cf6 !important; }
-                .text-amber-400, [class*="amber-400"] { color: #fbbf24 !important; }
-                .text-white { color: #ffffff !important; }
-                .text-foreground { color: #e5e7eb !important; }
-                .text-muted-foreground { color: #9ca3af !important; }
-                .gold-text { color: #f59e0b !important; }
-                .bg-primary { background-color: #8b5cf6 !important; }
-                [class*="bg-white\\/"] { background-color: rgba(255,255,255,0.05) !important; }
-                [class*="bg-gradient"] { background: #0a0a1a !important; }
-                .backdrop-blur-xl, [class*="backdrop-blur"] { backdrop-filter: none !important; }
-                .mystic-card { background: #0a0a1a !important; }
-                [class*="shadow"] { box-shadow: none !important; }
-            `;
-            document.head.appendChild(pdfStyle);
+            messages.forEach(m => {
+                const msgBubble = document.createElement('div');
+                msgBubble.style.padding = '24px';
+                msgBubble.style.borderRadius = '20px';
+                msgBubble.style.lineHeight = '1.7';
+                msgBubble.style.fontSize = '16px';
+                msgBubble.style.whiteSpace = 'pre-wrap';
 
-            // Doble requestAnimationFrame para forzar a iOS a procesar el DOM nuevo
+                // Convertir negritas markdown a HTML
+                let formattedText = m.content.replace(/\*\*(.*?)\*\*/g, '<strong style="color: #fbbf24;">$1</strong>');
+
+                if (m.role === 'user') {
+                    msgBubble.style.backgroundColor = '#8b5cf6';
+                    msgBubble.style.color = '#ffffff';
+                    msgBubble.style.marginLeft = 'auto';
+                    msgBubble.style.maxWidth = '80%';
+                    msgBubble.innerHTML = `<strong>Tú:</strong><br><br>${formattedText}`;
+                } else {
+                    msgBubble.style.backgroundColor = 'rgba(255, 255, 255, 0.05)';
+                    msgBubble.style.border = '1px solid rgba(255, 255, 255, 0.1)';
+                    msgBubble.style.color = '#e5e7eb';
+                    msgBubble.style.marginRight = 'auto';
+                    msgBubble.style.maxWidth = '95%';
+                    msgBubble.innerHTML = `<strong style="color: #8b5cf6; font-size: 18px;">Maestro Kong:</strong><br><br>${formattedText}`;
+                }
+                chatContainer.appendChild(msgBubble);
+            });
+            tempExportElement.appendChild(chatContainer);
+
+            // Doble requestAnimationFrame para forzar a iOS/Android a procesar el DOM nuevo
             await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
-            await new Promise(resolve => setTimeout(resolve, 400));
+            await new Promise(resolve => setTimeout(resolve, 500));
 
+            // ── Capturar con html2canvas-pro ──
             const canvas = await html2canvas(tempExportElement, {
-                scale: 1, // Escala 1 vital para móviles
+                scale: 1.5, // Nitidez equilibrada
                 useCORS: true,
                 allowTaint: false,
                 backgroundColor: '#050510',
-                windowWidth: isMobile ? 600 : 900,
-                onclone: (clonedDoc) => {
-                    if (pdfStyle?.textContent) {
-                        const s = clonedDoc.createElement('style');
-                        s.textContent = pdfStyle.textContent;
-                        clonedDoc.head.appendChild(s);
-                    }
-                    clonedDoc.body.style.backgroundColor = '#050510';
-                    const scrollAreas = clonedDoc.querySelectorAll('[class*="overflow-y-auto"]');
-                    scrollAreas.forEach((el) => {
-                        (el as HTMLElement).style.overflow = 'visible';
-                        (el as HTMLElement).style.height = 'auto';
-                        (el as HTMLElement).style.maxHeight = 'none';
-                    });
-                }
+                windowWidth: isMobile ? 700 : 900,
+                logging: false
             });
 
+            // ── Crear PDF ──
             const imgData = canvas.toDataURL('image/jpeg', 0.85);
             const pdf = new jsPDF({
                 orientation: 'portrait',
@@ -201,6 +194,7 @@ export default function MaestroKongChat({ diagnosis, handImages }: MaestroKongCh
                 yOffset += pdfHeight;
             }
 
+            // ── Cabecera y paginación ──
             const pageCount = pdf.getNumberOfPages();
             const now = new Date();
             const dateStr = now.toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric' });
@@ -211,7 +205,7 @@ export default function MaestroKongChat({ diagnosis, handImages }: MaestroKongCh
                 pdf.rect(0, 0, pdfWidth, 12, 'F');
                 pdf.setFontSize(8);
                 pdf.setTextColor(139, 92, 246);
-                pdf.text(`Tao Health Scanner Pro · Pág. ${i}/${pageCount}`, pdfWidth / 2, 7.5, { align: 'center' });
+                pdf.text(`Tao Health Scanner Pro · ${dateStr} · Pág. ${i}/${pageCount}`, pdfWidth / 2, 7.5, { align: 'center' });
             }
 
             pdf.save(`${dateStr.replace(/\//g, '-')}_TaoHealth.pdf`);
@@ -220,8 +214,9 @@ export default function MaestroKongChat({ diagnosis, handImages }: MaestroKongCh
             console.error('Error exporting PDF:', error);
             alert('Error detallado al generar PDF: ' + (error.message || 'Error de memoria en el navegador.'));
         } finally {
-            if (pdfStyle && pdfStyle.parentNode) pdfStyle.parentNode.removeChild(pdfStyle);
-            if (tempExportElement && tempExportElement.parentNode) tempExportElement.parentNode.removeChild(tempExportElement);
+            if (tempExportElement && tempExportElement.parentNode) {
+                tempExportElement.parentNode.removeChild(tempExportElement);
+            }
             setIsExporting(false);
         }
     };
@@ -341,7 +336,6 @@ export default function MaestroKongChat({ diagnosis, handImages }: MaestroKongCh
                         </div>
                     </div>
 
-                    {/* Contenedor de Botones */}
                     <div className="flex flex-col md:flex-row gap-4 md:gap-3 w-full md:w-auto items-center justify-center">
                         <motion.button
                             whileHover={{ scale: 1.02 }}
