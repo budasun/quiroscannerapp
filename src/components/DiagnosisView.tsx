@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useRef } from 'react';
 import { DiagnosisResult } from '@/types';
 import { Radar, RadarChart, PolarGrid, PolarAngleAxis, ResponsiveContainer, PolarRadiusAxis } from 'recharts';
 import { motion } from 'framer-motion';
@@ -8,9 +8,10 @@ import { Activity, Brain, Users, Globe, Eye, Zap, Info } from 'lucide-react';
 
 interface DiagnosisViewProps {
     result: DiagnosisResult;
+    handImages?: { left: string; right: string } | null;
 }
 
-export default function DiagnosisView({ result }: DiagnosisViewProps) {
+export default function DiagnosisView({ result, handImages }: DiagnosisViewProps) {
     const radarData = [
         { subject: 'Fuego', value: result.niveles_radar.fuego, fullMark: 100 },
         { subject: 'Tierra', value: result.niveles_radar.tierra, fullMark: 100 },
@@ -21,6 +22,7 @@ export default function DiagnosisView({ result }: DiagnosisViewProps) {
 
     return (
         <div className="max-w-7xl mx-auto space-y-24 px-4">
+            <div ref={handImages ? undefined : useRef<HTMLDivElement>(null)} className="bg-[#050510] p-8 rounded-3xl space-y-16">
             {/* Master Message */}
             <motion.div
                 initial={{ opacity: 0, y: 30 }}
@@ -184,6 +186,7 @@ export default function DiagnosisView({ result }: DiagnosisViewProps) {
                         );
                     })}
                 </div>
+            </div>
             </div>
         </div>
     );

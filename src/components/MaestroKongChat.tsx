@@ -162,11 +162,13 @@ export default function MaestroKongChat({ diagnosis, handImages }: MaestroKongCh
             await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
             await new Promise(resolve => setTimeout(resolve, 300));
 
-            // ── Capturar con html2canvas ──
+            // ── Capturar con html2canvas (Optimizado para móvil) ──
+            const isMobile = window.innerWidth < 768;
+
             const canvas = await html2canvas(tempExportElement, {
-                scale: 2,
+                scale: isMobile ? 1 : 1.5, // Protegemos la RAM en celulares
                 useCORS: true,
-                allowTaint: true,
+                allowTaint: false, // Evita bloqueos de seguridad del navegador móvil
                 backgroundColor: '#050510',
                 logging: false,
                 width: 900,
@@ -187,8 +189,8 @@ export default function MaestroKongChat({ diagnosis, handImages }: MaestroKongCh
                 }
             });
 
-            // ── Crear PDF ──
-            const imgData = canvas.toDataURL('image/png');
+            // ── Crear PDF (Compresión JPEG para salvar RAM) ──
+            const imgData = canvas.toDataURL('image/jpeg', 0.85);
             const pdf = new jsPDF({
                 orientation: 'portrait',
                 unit: 'mm',
@@ -202,7 +204,7 @@ export default function MaestroKongChat({ diagnosis, handImages }: MaestroKongCh
             let yOffset = 0;
             while (yOffset < contentHeightMm) {
                 if (yOffset > 0) pdf.addPage();
-                pdf.addImage(imgData, 'PNG', 0, -yOffset, pdfWidth, contentHeightMm);
+                pdf.addImage(imgData, 'JPEG', 0, -yOffset, pdfWidth, contentHeightMm);
                 yOffset += pdfHeight;
             }
 

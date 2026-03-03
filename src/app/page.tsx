@@ -12,9 +12,11 @@ export default function TaoHealthScanner() {
   const [diagnosis, setDiagnosis] = useState<DiagnosisResult | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [view, setView] = useState<'scan' | 'result'>('scan');
+  const [handImages, setHandImages] = useState<{ left: string; right: string } | null>(null);
 
   const handleAnalyze = async (left: string, right: string) => {
     setIsLoading(true);
+    setHandImages({ left, right });
     try {
       const response = await fetch('/api/analyze', {
         method: 'POST',
@@ -27,9 +29,19 @@ export default function TaoHealthScanner() {
       }
 
       const result = await response.json();
+      
+      if (result.fallback && result.error) {
+        if (result.diagnostico_wang) {
+          setDiagnosis(result);
+          setView('result');
+          window.scrollTo({ top: 0, behavior: 'smooth' });
+          return;
+        }
+        throw new Error(result.error);
+      }
+      
       setDiagnosis(result);
       setView('result');
-      // Scroll to top
       window.scrollTo({ top: 0, behavior: 'smooth' });
     } catch (error: any) {
       alert(error.message);
@@ -168,7 +180,7 @@ export default function TaoHealthScanner() {
                 <h2 className="text-4xl md:text-6xl font-black text-white">Tu Mapa Energético</h2>
               </div>
 
-              {diagnosis && <DiagnosisView result={diagnosis} />}
+              {diagnosis && <DiagnosisView result={diagnosis} handImages={handImages} />}
 
               <div id="chat" className="relative">
                 <div className="absolute inset-0 bg-primary/5 blur-[100px] -z-10" />
@@ -181,7 +193,7 @@ export default function TaoHealthScanner() {
                     Consulta al sabio sobre los desequilibrios encontrados y recibe guía espiritual.
                   </p>
                 </div>
-                {diagnosis && <MaestroKongChat diagnosis={diagnosis} />}
+                {diagnosis && <MaestroKongChat diagnosis={diagnosis} handImages={handImages} />}
               </div>
 
               <div className="flex justify-center pt-10">
