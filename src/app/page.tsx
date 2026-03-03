@@ -110,6 +110,7 @@ export default function TaoHealthScanner() {
             <Link href="/metodo" className="hover:text-white transition-colors">Tradicíon</Link>
             <Link href="/metodo" className="hover:text-white transition-colors">Método</Link>
             <Link href="/metodo" className="hover:text-white transition-colors">IA</Link>
+            <Link href="/desarrollador" className="hover:text-white transition-colors">Desarrollador</Link>
           </div>
           {diagnosis && (
             <button
@@ -252,6 +253,7 @@ export default function TaoHealthScanner() {
             © 2026 • Diseñado para la sanación profunda y el despertar de la consciencia.
           </p>
           <div className="flex gap-6 text-[10px] uppercase tracking-widest text-muted-foreground font-bold">
+            <Link href="/desarrollador" className="hover:text-primary transition-colors">Desarrollador</Link>
             <Link href="/privacidad" className="hover:text-primary transition-colors">Privacidad</Link>
             <Link href="/terminos" className="hover:text-primary transition-colors">Términos</Link>
           </div>
