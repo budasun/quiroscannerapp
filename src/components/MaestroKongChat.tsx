@@ -1,25 +1,248 @@
 'use client';
 
 import React, { useState, useRef, useEffect } from 'react';
-import { Send, MessageSquare, User, Sparkles, Scroll } from 'lucide-react';
+import { Send, MessageSquare, Sparkles, Scroll, BookOpen, Download, Loader2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ChatMessage, DiagnosisResult } from '@/types';
+import html2canvas from 'html2canvas';
+import jsPDF from 'jspdf';
 
 interface MaestroKongChatProps {
     diagnosis: DiagnosisResult;
+    handImages?: { left: string; right: string } | null;
 }
 
-export default function MaestroKongChat({ diagnosis }: MaestroKongChatProps) {
+function parseMarkdown(text: string): React.ReactNode {
+    const parts = text.split(/(\*\*[^*]+\*\*|\*[^*]+\*)/g);
+    return parts.map((part, i) => {
+        if (part.startsWith('**') && part.endsWith('**')) {
+            return <strong key={i} className="text-primary font-bold">{part.slice(2, -2)}</strong>;
+        }
+        if (part.startsWith('*') && part.endsWith('*')) {
+            return <em key={i}>{part.slice(1, -1)}</em>;
+        }
+        return part;
+    });
+}
+
+export default function MaestroKongChat({ diagnosis, handImages }: MaestroKongChatProps) {
     const [messages, setMessages] = useState<ChatMessage[]>([]);
     const [input, setInput] = useState('');
     const [isLoading, setIsLoading] = useState(false);
+    const [isExporting, setIsExporting] = useState(false);
     const scrollRef = useRef<HTMLDivElement>(null);
+    const contentRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
         if (scrollRef.current) {
             scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
         }
     }, [messages]);
+
+    const exportToPDF = async () => {
+        if (!contentRef.current || isExporting) return;
+
+        setIsExporting(true);
+
+        let tempExportElement: HTMLElement | null = null;
+        let pdfStyle: HTMLStyleElement | null = null;
+
+        try {
+            // Esperar a que terminen las animaciones de framer-motion
+            await new Promise(resolve => setTimeout(resolve, 800));
+
+            const originalElement = contentRef.current;
+
+            // ── Contenedor off-screen para el render del PDF ──
+            tempExportElement = document.createElement('div');
+            tempExportElement.style.width = '900px'; // Ancho fijo para render consistente
+            tempExportElement.style.backgroundColor = '#050510';
+            tempExportElement.style.padding = '30px';
+            tempExportElement.style.position = 'fixed';
+            tempExportElement.style.left = '-9999px';
+            tempExportElement.style.top = '0';
+            tempExportElement.style.fontFamily = 'system-ui, sans-serif';
+            document.body.appendChild(tempExportElement);
+
+            // ── Título del documento ──
+            const titleEl = document.createElement('div');
+            titleEl.style.textAlign = 'center';
+            titleEl.style.marginBottom = '20px';
+            titleEl.innerHTML = `
+                <h1 style="color:#8b5cf6;font-size:24px;font-weight:900;margin:0;letter-spacing:2px;">TAO HEALTH SCANNER PRO</h1>
+                <p style="color:#9ca3af;font-size:12px;margin:6px 0 0;">Diagnóstico Integral · ${new Date().toLocaleDateString('es-ES', { day: '2-digit', month: 'long', year: 'numeric' })}</p>
+                <hr style="border:none;border-top:1px solid rgba(139,92,246,0.3);margin:16px 0;">
+            `;
+            tempExportElement.appendChild(titleEl);
+
+            // ── Fotos originales de las manos ──
+            if (handImages?.left && handImages?.right) {
+                const imagesContainer = document.createElement('div');
+                imagesContainer.style.display = 'flex';
+                imagesContainer.style.justifyContent = 'space-around';
+                imagesContainer.style.gap = '20px';
+                imagesContainer.style.marginBottom = '24px';
+                imagesContainer.style.padding = '16px';
+                imagesContainer.style.backgroundColor = 'rgba(255,255,255,0.03)';
+                imagesContainer.style.borderRadius = '16px';
+                imagesContainer.style.border = '1px solid rgba(139,92,246,0.2)';
+
+                const makeImgWrapper = (src: string, label: string) => {
+                    const wrap = document.createElement('div');
+                    wrap.style.textAlign = 'center';
+                    wrap.style.flex = '1';
+                    const img = document.createElement('img');
+                    img.src = src;
+                    img.crossOrigin = 'anonymous';
+                    img.style.width = '100%';
+                    img.style.maxWidth = '380px';
+                    img.style.height = '280px';
+                    img.style.objectFit = 'cover';
+                    img.style.borderRadius = '12px';
+                    img.style.display = 'block';
+                    img.style.margin = '0 auto 8px';
+                    const lbl = document.createElement('p');
+                    lbl.textContent = label;
+                    lbl.style.color = '#9ca3af';
+                    lbl.style.fontSize = '11px';
+                    lbl.style.fontWeight = 'bold';
+                    lbl.style.letterSpacing = '2px';
+                    lbl.style.textTransform = 'uppercase';
+                    lbl.style.margin = '0';
+                    wrap.appendChild(img);
+                    wrap.appendChild(lbl);
+                    return wrap;
+                };
+
+                imagesContainer.appendChild(makeImgWrapper(handImages.left, '🖐 Mano Izquierda (Yin · Ancestral)'));
+                imagesContainer.appendChild(makeImgWrapper(handImages.right, '✋ Mano Derecha (Yang · Actual)'));
+                tempExportElement.appendChild(imagesContainer);
+            }
+
+            // ── Clonar contenido del chat (mensajes) ──
+            const cloned = originalElement.cloneNode(true) as HTMLElement;
+            cloned.style.width = '100%';
+            cloned.style.height = 'auto';
+            cloned.style.overflow = 'visible';
+            cloned.style.position = 'static';
+            // Eliminar el scroll interno del chat para que todo sea visible
+            const scrollArea = cloned.querySelector('[class*="overflow-y-auto"]') as HTMLElement;
+            if (scrollArea) {
+                scrollArea.style.overflow = 'visible';
+                scrollArea.style.height = 'auto';
+                scrollArea.style.maxHeight = 'none';
+            }
+            tempExportElement.appendChild(cloned);
+
+            // ── CSS: deshabilitar animaciones y fijar colores ──
+            pdfStyle = document.createElement('style');
+            pdfStyle.id = 'pdf-export-style';
+            pdfStyle.textContent = `
+                * {
+                    animation: none !important;
+                    transition: none !important;
+                    animation-duration: 0s !important;
+                }
+                .text-primary, [class*="text-primary"] { color: #8b5cf6 !important; }
+                .text-amber-400, [class*="amber-400"] { color: #fbbf24 !important; }
+                .text-white { color: #ffffff !important; }
+                .text-foreground { color: #e5e7eb !important; }
+                .text-muted-foreground { color: #9ca3af !important; }
+                .gold-text { color: #f59e0b !important; }
+                .bg-primary { background-color: #8b5cf6 !important; }
+                [class*="bg-white\\/"] { background-color: rgba(255,255,255,0.05) !important; }
+                [class*="bg-gradient"] { background: #0a0a1a !important; }
+                .backdrop-blur-xl, [class*="backdrop-blur"] { backdrop-filter: none !important; }
+                .mystic-card { background: #0a0a1a !important; }
+                [class*="shadow"] { box-shadow: none !important; }
+            `;
+            document.head.appendChild(pdfStyle);
+
+            // Esperar a que el navegador pinte el DOM off-screen
+            await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+            await new Promise(resolve => setTimeout(resolve, 300));
+
+            // ── Capturar con html2canvas ──
+            const canvas = await html2canvas(tempExportElement, {
+                scale: 2,
+                useCORS: true,
+                allowTaint: true,
+                backgroundColor: '#050510',
+                logging: false,
+                width: 900,
+                onclone: (clonedDoc) => {
+                    if (pdfStyle?.textContent) {
+                        const s = clonedDoc.createElement('style');
+                        s.textContent = pdfStyle.textContent;
+                        clonedDoc.head.appendChild(s);
+                    }
+                    clonedDoc.body.style.backgroundColor = '#050510';
+                    // Expandir scroll en el clon también
+                    const scrollAreas = clonedDoc.querySelectorAll('[class*="overflow-y-auto"]');
+                    scrollAreas.forEach((el) => {
+                        (el as HTMLElement).style.overflow = 'visible';
+                        (el as HTMLElement).style.height = 'auto';
+                        (el as HTMLElement).style.maxHeight = 'none';
+                    });
+                }
+            });
+
+            // ── Crear PDF ──
+            const imgData = canvas.toDataURL('image/png');
+            const pdf = new jsPDF({
+                orientation: 'portrait',
+                unit: 'mm',
+                format: 'a4',
+            });
+
+            const pdfWidth = pdf.internal.pageSize.getWidth();   // 210mm
+            const pdfHeight = pdf.internal.pageSize.getHeight(); // 297mm
+            const contentHeightMm = (canvas.height / canvas.width) * pdfWidth;
+
+            let yOffset = 0;
+            while (yOffset < contentHeightMm) {
+                if (yOffset > 0) pdf.addPage();
+                pdf.addImage(imgData, 'PNG', 0, -yOffset, pdfWidth, contentHeightMm);
+                yOffset += pdfHeight;
+            }
+
+            // ── Cabecera en cada página ──
+            const pageCount = pdf.getNumberOfPages();
+            const now = new Date();
+            const dateStr = now.toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric' });
+            const timeStr = now.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
+
+            for (let i = 1; i <= pageCount; i++) {
+                pdf.setPage(i);
+                pdf.setFillColor(5, 5, 16);
+                pdf.rect(0, 0, pdfWidth, 12, 'F');
+                pdf.setFontSize(8);
+                pdf.setTextColor(139, 92, 246);
+                pdf.text(
+                    `Tao Health Scanner Pro · ${dateStr} ${timeStr} · Pág. ${i}/${pageCount}`,
+                    pdfWidth / 2, 7.5,
+                    { align: 'center' }
+                );
+            }
+
+            // ── Nombre del archivo: [DD-MM-YYYY]_TaoHealth_ScannerPro.pdf ──
+            const fileName = `${dateStr.replace(/\//g, '-')}_TaoHealth_ScannerPro.pdf`;
+            pdf.save(fileName);
+
+        } catch (error) {
+            console.error('Error exporting PDF:', error);
+            alert('Error al generar el PDF. Por favor, intenta de nuevo.');
+        } finally {
+            // Limpiar todos los elementos temporales
+            if (pdfStyle && pdfStyle.parentNode) {
+                pdfStyle.parentNode.removeChild(pdfStyle);
+            }
+            if (tempExportElement && tempExportElement.parentNode) {
+                tempExportElement.parentNode.removeChild(tempExportElement);
+            }
+            setIsExporting(false);
+        }
+    };
 
     const handleSend = async () => {
         if (!input.trim() || isLoading) return;
@@ -56,14 +279,74 @@ export default function MaestroKongChat({ diagnosis }: MaestroKongChatProps) {
         }
     };
 
+    const handleConsultaCompleta = async () => {
+        if (isLoading) return;
+
+        setIsLoading(true);
+        setMessages([]);
+
+        try {
+            const response = await fetch('/api/consulta-completa', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ diagnosis })
+            });
+
+            if (!response.ok) throw new Error('Error en la consulta completa');
+
+            const data = await response.json();
+
+            if (data.consulta_completa) {
+                const { yo, ello, nosotros, ellos } = data.consulta_completa;
+                const newMessages: ChatMessage[] = [];
+
+                if (yo?.contenido) {
+                    newMessages.push({ role: 'assistant', content: `🏯 **YO - Mente y Espiritu**\n\n${yo.contenido}` });
+                }
+                if (ello?.contenido) {
+                    newMessages.push({ role: 'assistant', content: `🌿 **ELLO - Cuerpo Físico**\n\n${ello.contenido}` });
+                }
+                if (nosotros?.contenido) {
+                    newMessages.push({ role: 'assistant', content: `🪷 **NOSOTROS - Ancestros y Linaje**\n\n${nosotros.contenido}` });
+                }
+                if (ellos?.contenido) {
+                    newMessages.push({ role: 'assistant', content: `🌍 **ELLOS - Entorno y Sociedad**\n\n${ellos.contenido}` });
+                }
+                if (data.consejos_practicos) {
+                    const consejos = data.consejos_practicos;
+                    let consejosText = `✨ **CONSEJOS PRÁCTICOS**\n\n`;
+                    if (consejos.fisicos?.length) {
+                        consejosText += `🌿 **Físicos:**\n${consejos.fisicos.map((c: string) => `• ${c}`).join('\n')}\n\n`;
+                    }
+                    if (consejos.mentales?.length) {
+                        consejosText += `🧠 **Mentales:**\n${consejos.mentales.map((c: string) => `• ${c}`).join('\n')}\n\n`;
+                    }
+                    if (consejos.espirituales?.length) {
+                        consejosText += `✨ **Espirituales:**\n${consejos.espirituales.map((c: string) => `• ${c}`).join('\n')}`;
+                    }
+                    newMessages.push({ role: 'assistant', content: consejosText });
+                }
+
+                setMessages(newMessages);
+            } else {
+                throw new Error('Formato de respuesta inválido');
+            }
+        } catch (error) {
+            console.error(error);
+            setMessages([{ role: 'assistant', content: 'Las nubes oscurecen mi visión en este momento. Inténtalo de nuevo más tarde.' }]);
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
     return (
-        <div className="max-w-4xl mx-auto py-10">
+        <div className="max-w-4xl mx-auto py-10" ref={contentRef}>
             <div className="mystic-card rounded-[3rem] overflow-hidden flex flex-col h-[700px] border border-white/10 shadow-2xl relative">
                 <div className="absolute inset-0 bg-gradient-to-b from-primary/5 via-transparent to-transparent pointer-events-none" />
 
-                {/* Header */}
-                <div className="px-8 py-6 border-b border-white/5 bg-white/5 backdrop-blur-xl flex items-center justify-between relative z-10">
-                    <div className="flex items-center gap-4">
+                {/* Header Responsivo */}
+                <div className="px-6 py-6 md:px-8 md:py-6 border-b border-white/5 bg-white/5 backdrop-blur-xl flex flex-col md:flex-row items-center justify-between gap-6 relative z-10 w-full">
+                    <div className="flex items-center gap-4 w-full md:w-auto">
                         <div className="relative">
                             <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-primary/20 to-fuchsia-500/20 flex items-center justify-center border border-primary/30">
                                 <Scroll className="text-primary" size={28} />
@@ -75,9 +358,37 @@ export default function MaestroKongChat({ diagnosis }: MaestroKongChatProps) {
                             <p className="text-[10px] text-muted-foreground uppercase tracking-widest font-bold">Guía Taoísta Integral</p>
                         </div>
                     </div>
-                    <div className="flex gap-2">
-                        <div className="w-8 h-8 rounded-full bg-white/5 flex items-center justify-center text-muted-foreground hover:text-white transition-colors cursor-pointer">
-                            <MessageSquare size={16} />
+
+                    {/* Contenedor de Botones Corregido */}
+                    <div className="flex flex-col md:flex-row gap-4 md:gap-3 w-full md:w-auto items-center justify-center">
+                        <motion.button
+                            whileHover={{ scale: 1.02 }}
+                            whileTap={{ scale: 0.98 }}
+                            onClick={exportToPDF}
+                            disabled={isExporting}
+                            className="flex items-center justify-center gap-2 px-6 py-4 md:px-4 md:py-2 rounded-xl bg-gradient-to-r from-primary/20 to-fuchsia-500/20 border border-primary/30 text-primary hover:text-white transition-colors text-sm font-bold w-full md:w-auto disabled:opacity-50"
+                        >
+                            {isExporting ? (
+                                <Loader2 size={16} className="animate-spin" />
+                            ) : (
+                                <Download size={16} />
+                            )}
+                            Descargar PDF
+                        </motion.button>
+
+                        <motion.button
+                            whileHover={{ scale: 1.02 }}
+                            whileTap={{ scale: 0.95 }}
+                            onClick={handleConsultaCompleta}
+                            disabled={isLoading}
+                            className="flex items-center justify-center gap-2 px-6 py-4 md:px-4 md:py-2 rounded-xl bg-gradient-to-r from-amber-500/20 to-orange-500/20 border border-amber-500/30 text-amber-400 hover:text-amber-300 transition-colors text-sm font-bold w-full md:w-auto disabled:opacity-50"
+                        >
+                            <BookOpen size={16} />
+                            Consulta Completa
+                        </motion.button>
+
+                        <div className="hidden md:flex w-10 h-10 rounded-full bg-white/5 items-center justify-center text-muted-foreground hover:text-white transition-colors cursor-pointer shrink-0">
+                            <MessageSquare size={18} />
                         </div>
                     </div>
                 </div>
@@ -112,11 +423,11 @@ export default function MaestroKongChat({ diagnosis }: MaestroKongChatProps) {
                                     </div>
                                 )}
 
-                                <div className={`max-w-[75%] p-5 rounded-3xl relative ${m.role === 'user'
-                                        ? 'bg-primary text-white rounded-br-none shadow-lg shadow-primary/20'
-                                        : 'bg-white/5 text-foreground rounded-bl-none border border-white/10 backdrop-blur-md'
+                                <div className={`max-w-[80%] p-5 rounded-3xl relative ${m.role === 'user'
+                                    ? 'bg-primary text-white rounded-br-none shadow-lg shadow-primary/20'
+                                    : 'bg-white/5 text-foreground rounded-bl-none border border-white/10 backdrop-blur-md'
                                     }`}>
-                                    <p className="text-sm leading-relaxed font-light">{m.content}</p>
+                                    <p className="text-lg leading-relaxed font-light whitespace-pre-wrap">{parseMarkdown(m.content)}</p>
                                     {m.role === 'user' && (
                                         <div className="absolute bottom-[-18px] right-2 text-[8px] text-muted-foreground font-bold uppercase tracking-widest px-2">
                                             Tú
@@ -151,7 +462,7 @@ export default function MaestroKongChat({ diagnosis }: MaestroKongChatProps) {
                                 onChange={(e) => setInput(e.target.value)}
                                 onKeyDown={(e) => e.key === 'Enter' && handleSend()}
                                 placeholder="Pregunta al sabio sobre tu diagnóstico..."
-                                className="w-full bg-white/5 border border-white/10 rounded-[1.5rem] px-6 py-4 focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all text-sm font-light placeholder:text-muted-foreground/50"
+                                className="w-full bg-white/5 border border-white/10 rounded-[1.5rem] px-6 py-4 focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all text-base font-light placeholder:text-muted-foreground/50"
                             />
                             <div className="absolute right-4 top-1/2 -translate-y-1/2 flex gap-2">
                                 <div className="text-[10px] font-black text-muted-foreground/30 border border-white/5 px-1.5 rounded">ENT</div>
