@@ -4,7 +4,8 @@ import React, { useState, useRef, useEffect } from 'react';
 import { Send, MessageSquare, Sparkles, Scroll, BookOpen, Download, Loader2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ChatMessage, DiagnosisResult } from '@/types';
-import html2canvas from 'html2canvas';
+// Usamos la versión PRO para soportar colores oklab de Tailwind modernos
+import html2canvas from 'html2canvas-pro';
 import jsPDF from 'jspdf';
 
 interface MaestroKongChatProps {
@@ -30,12 +31,19 @@ export default function MaestroKongChat({ diagnosis, handImages }: MaestroKongCh
     const [input, setInput] = useState('');
     const [isLoading, setIsLoading] = useState(false);
     const [isExporting, setIsExporting] = useState(false);
+
+    // Referencias para el contenedor y el scroll inteligente
     const scrollRef = useRef<HTMLDivElement>(null);
     const contentRef = useRef<HTMLDivElement>(null);
+    const lastMessageRef = useRef<HTMLDivElement>(null);
 
+    // Scroll Inteligente: Se alinea al inicio si habla el Maestro, al final si hablas tú
     useEffect(() => {
-        if (scrollRef.current) {
-            scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+        if (lastMessageRef.current && messages.length > 0) {
+            const lastMsg = messages[messages.length - 1];
+            // 'start' nos deja ver el inicio de la lectura, 'end' nos baja al último mensaje corto
+            const scrollBehavior = lastMsg.role === 'assistant' ? 'start' : 'end';
+            lastMessageRef.current.scrollIntoView({ behavior: 'smooth', block: scrollBehavior });
         }
     }, [messages]);
 
@@ -210,7 +218,6 @@ export default function MaestroKongChat({ diagnosis, handImages }: MaestroKongCh
 
         } catch (error: any) {
             console.error('Error exporting PDF:', error);
-            // Si llega a fallar, ahora la alerta nos dirá exactamente por qué
             alert('Error detallado al generar PDF: ' + (error.message || 'Error de memoria en el navegador.'));
         } finally {
             if (pdfStyle && pdfStyle.parentNode) pdfStyle.parentNode.removeChild(pdfStyle);
@@ -334,7 +341,7 @@ export default function MaestroKongChat({ diagnosis, handImages }: MaestroKongCh
                         </div>
                     </div>
 
-                    {/* Contenedor de Botones Corregido */}
+                    {/* Contenedor de Botones */}
                     <div className="flex flex-col md:flex-row gap-4 md:gap-3 w-full md:w-auto items-center justify-center">
                         <motion.button
                             whileHover={{ scale: 1.02 }}
@@ -385,32 +392,37 @@ export default function MaestroKongChat({ diagnosis, handImages }: MaestroKongCh
                     )}
 
                     <AnimatePresence>
-                        {messages.map((m, i) => (
-                            <motion.div
-                                key={i}
-                                initial={{ opacity: 0, y: 10, scale: 0.95 }}
-                                animate={{ opacity: 1, y: 0, scale: 1 }}
-                                className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'} items-end gap-3`}
-                            >
-                                {m.role === 'assistant' && (
-                                    <div className="w-8 h-8 rounded-lg bg-primary/10 border border-primary/20 flex items-center justify-center mb-1 shrink-0">
-                                        <Sparkles size={14} className="text-primary" />
-                                    </div>
-                                )}
-
-                                <div className={`max-w-[80%] p-5 rounded-3xl relative ${m.role === 'user'
-                                    ? 'bg-primary text-white rounded-br-none shadow-lg shadow-primary/20'
-                                    : 'bg-white/5 text-foreground rounded-bl-none border border-white/10 backdrop-blur-md'
-                                    }`}>
-                                    <p className="text-lg leading-relaxed font-light whitespace-pre-wrap">{parseMarkdown(m.content)}</p>
-                                    {m.role === 'user' && (
-                                        <div className="absolute bottom-[-18px] right-2 text-[8px] text-muted-foreground font-bold uppercase tracking-widest px-2">
-                                            Tú
+                        {messages.map((m, i) => {
+                            const isLast = i === messages.length - 1;
+                            return (
+                                <motion.div
+                                    key={i}
+                                    ref={isLast ? lastMessageRef : null}
+                                    style={{ scrollMarginTop: '2rem' }}
+                                    initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                                    className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'} items-end gap-3`}
+                                >
+                                    {m.role === 'assistant' && (
+                                        <div className="w-8 h-8 rounded-lg bg-primary/10 border border-primary/20 flex items-center justify-center mb-1 shrink-0">
+                                            <Sparkles size={14} className="text-primary" />
                                         </div>
                                     )}
-                                </div>
-                            </motion.div>
-                        ))}
+
+                                    <div className={`max-w-[80%] p-5 rounded-3xl relative ${m.role === 'user'
+                                        ? 'bg-primary text-white rounded-br-none shadow-lg shadow-primary/20'
+                                        : 'bg-white/5 text-foreground rounded-bl-none border border-white/10 backdrop-blur-md'
+                                        }`}>
+                                        <p className="text-lg leading-relaxed font-light whitespace-pre-wrap">{parseMarkdown(m.content)}</p>
+                                        {m.role === 'user' && (
+                                            <div className="absolute bottom-[-18px] right-2 text-[8px] text-muted-foreground font-bold uppercase tracking-widest px-2">
+                                                Tú
+                                            </div>
+                                        )}
+                                    </div>
+                                </motion.div>
+                            );
+                        })}
                     </AnimatePresence>
 
                     {isLoading && (
