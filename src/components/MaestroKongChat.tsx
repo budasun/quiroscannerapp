@@ -48,23 +48,22 @@ export default function MaestroKongChat({ diagnosis, handImages }: MaestroKongCh
         let pdfStyle: HTMLStyleElement | null = null;
 
         try {
-            // Esperar a que terminen las animaciones de framer-motion
             await new Promise(resolve => setTimeout(resolve, 800));
-
             const originalElement = contentRef.current;
+            const isMobile = window.innerWidth < 768;
 
-            // ── Contenedor off-screen para el render del PDF ──
+            // ── Contenedor off-screen seguro para móviles (Nunca usar left: -9999px) ──
             tempExportElement = document.createElement('div');
-            tempExportElement.style.width = '900px'; // Ancho fijo para render consistente
+            tempExportElement.style.width = isMobile ? '600px' : '900px';
             tempExportElement.style.backgroundColor = '#050510';
             tempExportElement.style.padding = '30px';
-            tempExportElement.style.position = 'fixed';
-            tempExportElement.style.left = '-9999px';
+            tempExportElement.style.position = 'absolute'; // Usamos absolute, no fixed
             tempExportElement.style.top = '0';
+            tempExportElement.style.left = '0';
+            tempExportElement.style.zIndex = '-1000'; // Escondido detrás del fondo visible
             tempExportElement.style.fontFamily = 'system-ui, sans-serif';
             document.body.appendChild(tempExportElement);
 
-            // ── Título del documento ──
             const titleEl = document.createElement('div');
             titleEl.style.textAlign = 'center';
             titleEl.style.marginBottom = '20px';
@@ -75,7 +74,6 @@ export default function MaestroKongChat({ diagnosis, handImages }: MaestroKongCh
             `;
             tempExportElement.appendChild(titleEl);
 
-            // ── Fotos originales de las manos ──
             if (handImages?.left && handImages?.right) {
                 const imagesContainer = document.createElement('div');
                 imagesContainer.style.display = 'flex';
@@ -114,18 +112,16 @@ export default function MaestroKongChat({ diagnosis, handImages }: MaestroKongCh
                     return wrap;
                 };
 
-                imagesContainer.appendChild(makeImgWrapper(handImages.left, '🖐 Mano Izquierda (Yin · Ancestral)'));
-                imagesContainer.appendChild(makeImgWrapper(handImages.right, '✋ Mano Derecha (Yang · Actual)'));
+                imagesContainer.appendChild(makeImgWrapper(handImages.left, '🖐 Izquierda (Ancestral)'));
+                imagesContainer.appendChild(makeImgWrapper(handImages.right, '✋ Derecha (Actual)'));
                 tempExportElement.appendChild(imagesContainer);
             }
 
-            // ── Clonar contenido del chat (mensajes) ──
             const cloned = originalElement.cloneNode(true) as HTMLElement;
             cloned.style.width = '100%';
             cloned.style.height = 'auto';
             cloned.style.overflow = 'visible';
             cloned.style.position = 'static';
-            // Eliminar el scroll interno del chat para que todo sea visible
             const scrollArea = cloned.querySelector('[class*="overflow-y-auto"]') as HTMLElement;
             if (scrollArea) {
                 scrollArea.style.overflow = 'visible';
@@ -134,15 +130,10 @@ export default function MaestroKongChat({ diagnosis, handImages }: MaestroKongCh
             }
             tempExportElement.appendChild(cloned);
 
-            // ── CSS: deshabilitar animaciones y fijar colores ──
             pdfStyle = document.createElement('style');
             pdfStyle.id = 'pdf-export-style';
             pdfStyle.textContent = `
-                * {
-                    animation: none !important;
-                    transition: none !important;
-                    animation-duration: 0s !important;
-                }
+                * { animation: none !important; transition: none !important; animation-duration: 0s !important; }
                 .text-primary, [class*="text-primary"] { color: #8b5cf6 !important; }
                 .text-amber-400, [class*="amber-400"] { color: #fbbf24 !important; }
                 .text-white { color: #ffffff !important; }
@@ -158,20 +149,16 @@ export default function MaestroKongChat({ diagnosis, handImages }: MaestroKongCh
             `;
             document.head.appendChild(pdfStyle);
 
-            // Esperar a que el navegador pinte el DOM off-screen
+            // Doble requestAnimationFrame para forzar a iOS a procesar el DOM nuevo
             await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
-            await new Promise(resolve => setTimeout(resolve, 300));
-
-            // ── Capturar con html2canvas (Optimizado para móvil) ──
-            const isMobile = window.innerWidth < 768;
+            await new Promise(resolve => setTimeout(resolve, 400));
 
             const canvas = await html2canvas(tempExportElement, {
-                scale: isMobile ? 1 : 1.5, // Protegemos la RAM en celulares
+                scale: 1, // Escala 1 vital para móviles
                 useCORS: true,
-                allowTaint: false, // Evita bloqueos de seguridad del navegador móvil
+                allowTaint: false,
                 backgroundColor: '#050510',
-                logging: false,
-                width: 900,
+                windowWidth: isMobile ? 600 : 900,
                 onclone: (clonedDoc) => {
                     if (pdfStyle?.textContent) {
                         const s = clonedDoc.createElement('style');
@@ -179,7 +166,6 @@ export default function MaestroKongChat({ diagnosis, handImages }: MaestroKongCh
                         clonedDoc.head.appendChild(s);
                     }
                     clonedDoc.body.style.backgroundColor = '#050510';
-                    // Expandir scroll en el clon también
                     const scrollAreas = clonedDoc.querySelectorAll('[class*="overflow-y-auto"]');
                     scrollAreas.forEach((el) => {
                         (el as HTMLElement).style.overflow = 'visible';
@@ -189,7 +175,6 @@ export default function MaestroKongChat({ diagnosis, handImages }: MaestroKongCh
                 }
             });
 
-            // ── Crear PDF (Compresión JPEG para salvar RAM) ──
             const imgData = canvas.toDataURL('image/jpeg', 0.85);
             const pdf = new jsPDF({
                 orientation: 'portrait',
@@ -197,8 +182,8 @@ export default function MaestroKongChat({ diagnosis, handImages }: MaestroKongCh
                 format: 'a4',
             });
 
-            const pdfWidth = pdf.internal.pageSize.getWidth();   // 210mm
-            const pdfHeight = pdf.internal.pageSize.getHeight(); // 297mm
+            const pdfWidth = pdf.internal.pageSize.getWidth();
+            const pdfHeight = pdf.internal.pageSize.getHeight();
             const contentHeightMm = (canvas.height / canvas.width) * pdfWidth;
 
             let yOffset = 0;
@@ -208,11 +193,9 @@ export default function MaestroKongChat({ diagnosis, handImages }: MaestroKongCh
                 yOffset += pdfHeight;
             }
 
-            // ── Cabecera en cada página ──
             const pageCount = pdf.getNumberOfPages();
             const now = new Date();
             const dateStr = now.toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric' });
-            const timeStr = now.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
 
             for (let i = 1; i <= pageCount; i++) {
                 pdf.setPage(i);
@@ -220,28 +203,18 @@ export default function MaestroKongChat({ diagnosis, handImages }: MaestroKongCh
                 pdf.rect(0, 0, pdfWidth, 12, 'F');
                 pdf.setFontSize(8);
                 pdf.setTextColor(139, 92, 246);
-                pdf.text(
-                    `Tao Health Scanner Pro · ${dateStr} ${timeStr} · Pág. ${i}/${pageCount}`,
-                    pdfWidth / 2, 7.5,
-                    { align: 'center' }
-                );
+                pdf.text(`Tao Health Scanner Pro · Pág. ${i}/${pageCount}`, pdfWidth / 2, 7.5, { align: 'center' });
             }
 
-            // ── Nombre del archivo: [DD-MM-YYYY]_TaoHealth_ScannerPro.pdf ──
-            const fileName = `${dateStr.replace(/\//g, '-')}_TaoHealth_ScannerPro.pdf`;
-            pdf.save(fileName);
+            pdf.save(`${dateStr.replace(/\//g, '-')}_TaoHealth.pdf`);
 
-        } catch (error) {
+        } catch (error: any) {
             console.error('Error exporting PDF:', error);
-            alert('Error al generar el PDF. Por favor, intenta de nuevo.');
+            // Si llega a fallar, ahora la alerta nos dirá exactamente por qué
+            alert('Error detallado al generar PDF: ' + (error.message || 'Error de memoria en el navegador.'));
         } finally {
-            // Limpiar todos los elementos temporales
-            if (pdfStyle && pdfStyle.parentNode) {
-                pdfStyle.parentNode.removeChild(pdfStyle);
-            }
-            if (tempExportElement && tempExportElement.parentNode) {
-                tempExportElement.parentNode.removeChild(tempExportElement);
-            }
+            if (pdfStyle && pdfStyle.parentNode) pdfStyle.parentNode.removeChild(pdfStyle);
+            if (tempExportElement && tempExportElement.parentNode) tempExportElement.parentNode.removeChild(tempExportElement);
             setIsExporting(false);
         }
     };
