@@ -57,11 +57,10 @@ export default function MaestroKongChat({ diagnosis, handImages }: MaestroKongCh
             await new Promise(resolve => setTimeout(resolve, 800));
             const isMobile = window.innerWidth < 768;
 
-            // ── Contenedor off-screen (Documento Limpio) ──
+            // ── Contenedor maestro off-screen ──
             tempExportElement = document.createElement('div');
             tempExportElement.style.width = isMobile ? '700px' : '900px';
             tempExportElement.style.backgroundColor = '#050510';
-            tempExportElement.style.padding = '40px';
             tempExportElement.style.position = 'absolute';
             tempExportElement.style.top = '0';
             tempExportElement.style.left = '0';
@@ -69,7 +68,14 @@ export default function MaestroKongChat({ diagnosis, handImages }: MaestroKongCh
             tempExportElement.style.fontFamily = 'system-ui, sans-serif';
             document.body.appendChild(tempExportElement);
 
-            // ── Título del documento ──
+            // Array donde guardaremos cada "bloque" para renderizarlo por separado
+            const blocksToCapture: HTMLElement[] = [];
+
+            // ── BLOQUE 1: Cabecera y Fotos ──
+            const headerBlock = document.createElement('div');
+            headerBlock.style.padding = '40px 40px 10px 40px';
+            headerBlock.style.backgroundColor = '#050510';
+
             const titleEl = document.createElement('div');
             titleEl.style.textAlign = 'center';
             titleEl.style.marginBottom = '30px';
@@ -78,15 +84,14 @@ export default function MaestroKongChat({ diagnosis, handImages }: MaestroKongCh
                 <p style="color:#9ca3af;font-size:14px;margin:8px 0 0;">Diagnóstico Integral · ${new Date().toLocaleDateString('es-ES', { day: '2-digit', month: 'long', year: 'numeric' })}</p>
                 <hr style="border:none;border-top:1px solid rgba(139,92,246,0.3);margin:24px 0;">
             `;
-            tempExportElement.appendChild(titleEl);
+            headerBlock.appendChild(titleEl);
 
-            // ── Fotos originales de las manos (Sin aplastar) ──
             if (handImages?.left && handImages?.right) {
                 const imagesContainer = document.createElement('div');
                 imagesContainer.style.display = 'flex';
                 imagesContainer.style.justifyContent = 'space-between';
                 imagesContainer.style.gap = '20px';
-                imagesContainer.style.marginBottom = '40px';
+                imagesContainer.style.marginBottom = '20px';
 
                 const makeImgWrapper = (src: string, label: string) => {
                     const wrap = document.createElement('div');
@@ -102,7 +107,7 @@ export default function MaestroKongChat({ diagnosis, handImages }: MaestroKongCh
                     img.crossOrigin = 'anonymous';
                     img.style.width = '100%';
                     img.style.height = 'auto';
-                    img.style.maxHeight = '350px';
+                    img.style.maxHeight = '320px';
                     img.style.objectFit = 'contain';
                     img.style.borderRadius = '8px';
                     img.style.marginBottom = '12px';
@@ -123,16 +128,17 @@ export default function MaestroKongChat({ diagnosis, handImages }: MaestroKongCh
 
                 imagesContainer.appendChild(makeImgWrapper(handImages.left, '🖐 Izquierda (Yin · Ancestral)'));
                 imagesContainer.appendChild(makeImgWrapper(handImages.right, '✋ Derecha (Yang · Actual)'));
-                tempExportElement.appendChild(imagesContainer);
+                headerBlock.appendChild(imagesContainer);
             }
+            tempExportElement.appendChild(headerBlock);
+            blocksToCapture.push(headerBlock);
 
-            // ── Generación de Mensajes (Texto perfecto, sin botones UI) ──
-            const chatContainer = document.createElement('div');
-            chatContainer.style.display = 'flex';
-            chatContainer.style.flexDirection = 'column';
-            chatContainer.style.gap = '24px';
-
+            // ── BLOQUE 2: Mensajes del Chat Individuales ──
             messages.forEach(m => {
+                const msgBlock = document.createElement('div');
+                msgBlock.style.padding = '10px 40px';
+                msgBlock.style.backgroundColor = '#050510';
+
                 const msgBubble = document.createElement('div');
                 msgBubble.style.padding = '24px';
                 msgBubble.style.borderRadius = '20px';
@@ -157,44 +163,56 @@ export default function MaestroKongChat({ diagnosis, handImages }: MaestroKongCh
                     msgBubble.style.maxWidth = '95%';
                     msgBubble.innerHTML = `<strong style="color: #8b5cf6; font-size: 18px;">Maestro Kong:</strong><br><br>${formattedText}`;
                 }
-                chatContainer.appendChild(msgBubble);
-            });
-            tempExportElement.appendChild(chatContainer);
-
-            // Doble requestAnimationFrame para forzar a iOS/Android a procesar el DOM nuevo
-            await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
-            await new Promise(resolve => setTimeout(resolve, 500));
-
-            // ── Capturar con html2canvas-pro ──
-            const canvas = await html2canvas(tempExportElement, {
-                scale: 1.5, // Nitidez equilibrada
-                useCORS: true,
-                allowTaint: false,
-                backgroundColor: '#050510',
-                windowWidth: isMobile ? 700 : 900,
-                logging: false
+                msgBlock.appendChild(msgBubble);
+                tempExportElement.appendChild(msgBlock);
+                blocksToCapture.push(msgBlock);
             });
 
-            // ── Crear PDF ──
-            const imgData = canvas.toDataURL('image/jpeg', 0.85);
-            const pdf = new jsPDF({
-                orientation: 'portrait',
-                unit: 'mm',
-                format: 'a4',
-            });
-
+            // ── MOTOR ANTI-CORTES (Paginación Inteligente) ──
+            const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
             const pdfWidth = pdf.internal.pageSize.getWidth();
             const pdfHeight = pdf.internal.pageSize.getHeight();
-            const contentHeightMm = (canvas.height / canvas.width) * pdfWidth;
 
-            let yOffset = 0;
-            while (yOffset < contentHeightMm) {
-                if (yOffset > 0) pdf.addPage();
-                pdf.addImage(imgData, 'JPEG', 0, -yOffset, pdfWidth, contentHeightMm);
-                yOffset += pdfHeight;
+            const drawBackground = () => {
+                pdf.setFillColor(5, 5, 16);
+                pdf.rect(0, 0, pdfWidth, pdfHeight, 'F');
+            };
+
+            drawBackground();
+            let cursorY = 0;
+
+            // Procesamos y pegamos cada bloque uno por uno
+            for (let i = 0; i < blocksToCapture.length; i++) {
+                const block = blocksToCapture[i];
+
+                // Mini pausa para que el navegador asimile los estilos (vital en Safari)
+                await new Promise(resolve => setTimeout(resolve, 50));
+
+                const canvas = await html2canvas(block, {
+                    scale: 1.5,
+                    useCORS: true,
+                    allowTaint: false,
+                    backgroundColor: '#050510',
+                    windowWidth: isMobile ? 700 : 900,
+                    logging: false
+                });
+
+                const imgData = canvas.toDataURL('image/jpeg', 0.85);
+                const blockHeightMm = (canvas.height / canvas.width) * pdfWidth;
+
+                // MAGIA: Si el bloque actual va a rebasar el límite de la página...
+                // ...creamos una página nueva ANTES de pegarlo, dejándolo intacto.
+                if (cursorY + blockHeightMm > pdfHeight - 20) {
+                    pdf.addPage();
+                    drawBackground();
+                    cursorY = 0; // Reiniciamos el cursor arriba
+                }
+
+                pdf.addImage(imgData, 'JPEG', 0, cursorY, pdfWidth, blockHeightMm);
+                cursorY += blockHeightMm; // Movemos el cursor hacia abajo para el siguiente bloque
             }
 
-            // ── Cabecera y paginación ──
+            // ── Paginación y Textos de pie de página ──
             const pageCount = pdf.getNumberOfPages();
             const now = new Date();
             const dateStr = now.toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric' });
