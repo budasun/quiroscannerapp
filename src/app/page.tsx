@@ -1,6 +1,7 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import Link from 'next/link';
 import HandScanner from '@/components/HandScanner';
 import DiagnosisView from '@/components/DiagnosisView';
 import MaestroKongChat from '@/components/MaestroKongChat';
@@ -13,6 +14,35 @@ export default function TaoHealthScanner() {
   const [isLoading, setIsLoading] = useState(false);
   const [view, setView] = useState<'scan' | 'result'>('scan');
   const [handImages, setHandImages] = useState<{ left: string; right: string } | null>(null);
+
+  // Persistencia de Estado
+  useEffect(() => {
+    const saved = localStorage.getItem('tao_diagnosis');
+    const savedImages = localStorage.getItem('tao_images');
+    if (saved) {
+      setDiagnosis(JSON.parse(saved));
+      setView('result');
+    }
+    if (savedImages) {
+      setHandImages(JSON.parse(savedImages));
+    }
+  }, []);
+
+  useEffect(() => {
+    if (diagnosis) {
+      localStorage.setItem('tao_diagnosis', JSON.stringify(diagnosis));
+    } else {
+      localStorage.removeItem('tao_diagnosis');
+    }
+  }, [diagnosis]);
+
+  useEffect(() => {
+    if (handImages) {
+      localStorage.setItem('tao_images', JSON.stringify(handImages));
+    } else {
+      localStorage.removeItem('tao_images');
+    }
+  }, [handImages]);
 
   const handleAnalyze = async (left: string, right: string) => {
     setIsLoading(true);
@@ -29,7 +59,7 @@ export default function TaoHealthScanner() {
       }
 
       const result = await response.json();
-      
+
       if (result.fallback && result.error) {
         if (result.diagnostico_wang) {
           setDiagnosis(result);
@@ -39,7 +69,7 @@ export default function TaoHealthScanner() {
         }
         throw new Error(result.error);
       }
-      
+
       setDiagnosis(result);
       setView('result');
       window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -222,8 +252,8 @@ export default function TaoHealthScanner() {
             © 2026 • Diseñado para la sanación profunda y el despertar de la consciencia.
           </p>
           <div className="flex gap-6 text-[10px] uppercase tracking-widest text-muted-foreground font-bold">
-            <a href="#" className="hover:text-primary transition-colors">Privacidad</a>
-            <a href="#" className="hover:text-primary transition-colors">Términos</a>
+            <Link href="/privacidad" className="hover:text-primary transition-colors">Privacidad</Link>
+            <Link href="/terminos" className="hover:text-primary transition-colors">Términos</Link>
           </div>
         </div>
       </footer>

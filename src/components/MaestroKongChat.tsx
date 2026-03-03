@@ -1,7 +1,8 @@
 'use client';
 
 import React, { useState, useRef, useEffect } from 'react';
-import { Send, MessageSquare, Sparkles, Scroll, BookOpen, Download, Loader2 } from 'lucide-react';
+import Link from 'next/link';
+import { Send, MessageSquare, Sparkles, Scroll, BookOpen, Download, Loader2, ShieldCheck, Scale } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ChatMessage, DiagnosisResult } from '@/types';
 import html2canvas from 'html2canvas-pro';
@@ -529,6 +530,18 @@ export default function MaestroKongChat({ diagnosis, handImages }: MaestroKongCh
                         >
                             <Send size={20} />
                         </motion.button>
+                    </div>
+
+                    {/* Legal Footer para Chat */}
+                    <div className="mt-6 flex flex-wrap justify-center gap-x-8 gap-y-2 opacity-40 hover:opacity-100 transition-opacity pb-2">
+                        <Link href="/privacidad" className="text-[10px] font-bold uppercase tracking-[0.2em] flex items-center gap-1.5 hover:text-primary transition-colors">
+                            <ShieldCheck size={10} />
+                            Privacidad
+                        </Link>
+                        <Link href="/terminos" className="text-[10px] font-bold uppercase tracking-[0.2em] flex items-center gap-1.5 hover:text-primary transition-colors">
+                            <Scale size={10} />
+                            Términos
+                        </Link>
                     </div>
                 </div>
             </div>
