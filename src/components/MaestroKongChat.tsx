@@ -534,6 +534,10 @@ export default function MaestroKongChat({ diagnosis, handImages }: MaestroKongCh
 
                     {/* Legal Footer para Chat */}
                     <div className="mt-6 flex flex-wrap justify-center gap-x-8 gap-y-2 opacity-40 hover:opacity-100 transition-opacity pb-2">
+                        <Link href="/metodo" className="text-[10px] font-bold uppercase tracking-[0.2em] flex items-center gap-1.5 hover:text-primary transition-colors">
+                            <BookOpen size={10} />
+                            El Método
+                        </Link>
                         <Link href="/privacidad" className="text-[10px] font-bold uppercase tracking-[0.2em] flex items-center gap-1.5 hover:text-primary transition-colors">
                             <ShieldCheck size={10} />
                             Privacidad

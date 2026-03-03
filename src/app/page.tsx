@@ -107,9 +107,9 @@ export default function TaoHealthScanner() {
 
         <div className="flex items-center gap-6">
           <div className="hidden md:flex gap-6 text-sm font-medium text-muted-foreground">
-            <a href="#" className="hover:text-white transition-colors">Tradicíon</a>
-            <a href="#" className="hover:text-white transition-colors">Método</a>
-            <a href="#" className="hover:text-white transition-colors">IA</a>
+            <Link href="/metodo" className="hover:text-white transition-colors">Tradicíon</Link>
+            <Link href="/metodo" className="hover:text-white transition-colors">Método</Link>
+            <Link href="/metodo" className="hover:text-white transition-colors">IA</Link>
           </div>
           {diagnosis && (
             <button
