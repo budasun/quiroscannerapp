@@ -1,11 +1,12 @@
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
 import {
     Sparkles, Scroll, Brain, Globe, ArrowLeft, Zap, Heart,
-    Shield, Layers, BookOpen, Leaf, Target, Cpu, Eye, Activity
+    Shield, Layers, BookOpen, Leaf, Target, Cpu, Eye, Activity,
+    Code2, ExternalLink, Loader2
 } from 'lucide-react';
 
 /* ─── Datos de la línea de tiempo ─── */
@@ -106,6 +107,8 @@ const pillars = [
 
 /* ─── Componente ─── */
 export default function MetodoPage() {
+    const [iframeLoading, setIframeLoading] = useState(true);
+
     return (
         <main className="min-h-screen bg-[#050510] text-slate-300 selection:bg-primary/30 selection:text-white pb-32">
             {/* Background */}
@@ -290,6 +293,54 @@ export default function MetodoPage() {
                             <Sparkles size={18} />
                             Comenzar mi Diagnóstico
                         </Link>
+                    </div>
+                </motion.div>
+
+                {/* ─── Iframe Desarrollador ─── */}
+                <motion.div
+                    initial={{ opacity: 0, y: 30 }}
+                    whileInView={{ opacity: 1, y: 0 }}
+                    viewport={{ once: true }}
+                    className="mt-32 space-y-8"
+                >
+                    <div className="text-center space-y-4">
+                        <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-[10px] font-black uppercase tracking-widest">
+                            <Code2 size={12} />
+                            Desarrollador
+                        </div>
+                        <h2 className="text-3xl md:text-4xl font-black text-white tracking-tight">Conoce al Creador</h2>
+                        <p className="text-muted-foreground font-light max-w-xl mx-auto">
+                            El artesano detrás de la convergencia entre sabiduría ancestral y tecnología de vanguardia.
+                        </p>
+                    </div>
+
+                    <div className="rounded-[2.5rem] overflow-hidden border border-white/10 relative" style={{ height: '80vh' }}>
+                        {iframeLoading && (
+                            <div className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-[#050510] gap-4">
+                                <Loader2 size={32} className="text-primary animate-spin" />
+                                <p className="text-muted-foreground text-sm">Cargando portafolio...</p>
+                            </div>
+                        )}
+                        <iframe
+                            src="https://www.octaviotrs.com/"
+                            title="Octavio TRS - Desarrollador"
+                            className="w-full h-full border-none"
+                            onLoad={() => setIframeLoading(false)}
+                            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope"
+                            sandbox="allow-scripts allow-same-origin allow-popups allow-forms"
+                        />
+                    </div>
+
+                    <div className="text-center">
+                        <a
+                            href="https://www.octaviotrs.com/"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-primary transition-colors font-medium"
+                        >
+                            <ExternalLink size={14} />
+                            Abrir octaviotrs.com en nueva pestaña
+                        </a>
                     </div>
                 </motion.div>
 
