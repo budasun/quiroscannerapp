@@ -4,6 +4,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { Send, MessageSquare, Sparkles, Scroll, BookOpen, Download, Loader2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ChatMessage, DiagnosisResult } from '@/types';
+// @ts-ignore
 import html2canvas from 'html2canvas-pro';
 import jsPDF from 'jspdf';
 
@@ -39,8 +40,6 @@ export default function MaestroKongChat({ diagnosis, handImages }: MaestroKongCh
     useEffect(() => {
         if (lastMessageRef.current && messages.length > 0) {
             const lastMsg = messages[messages.length - 1];
-            // Si el Maestro habla (mensaje largo), alineamos la vista al inicio.
-            // Si el usuario habla, alineamos al final naturalmente.
             const scrollBehavior = lastMsg.role === 'assistant' ? 'start' : 'end';
             lastMessageRef.current.scrollIntoView({ behavior: 'smooth', block: scrollBehavior });
         }
@@ -53,11 +52,9 @@ export default function MaestroKongChat({ diagnosis, handImages }: MaestroKongCh
         let tempExportElement: HTMLElement | null = null;
 
         try {
-            // Esperar a que terminen las animaciones
             await new Promise(resolve => setTimeout(resolve, 800));
             const isMobile = window.innerWidth < 768;
 
-            // ── Contenedor maestro off-screen ──
             tempExportElement = document.createElement('div');
             tempExportElement.style.width = isMobile ? '700px' : '900px';
             tempExportElement.style.backgroundColor = '#050510';
@@ -68,10 +65,8 @@ export default function MaestroKongChat({ diagnosis, handImages }: MaestroKongCh
             tempExportElement.style.fontFamily = 'system-ui, sans-serif';
             document.body.appendChild(tempExportElement);
 
-            // Array donde guardaremos cada "bloque" para renderizarlo por separado
             const blocksToCapture: HTMLElement[] = [];
 
-            // ── BLOQUE 1: Cabecera y Fotos ──
             const headerBlock = document.createElement('div');
             headerBlock.style.padding = '40px 40px 10px 40px';
             headerBlock.style.backgroundColor = '#050510';
@@ -133,7 +128,6 @@ export default function MaestroKongChat({ diagnosis, handImages }: MaestroKongCh
             tempExportElement.appendChild(headerBlock);
             blocksToCapture.push(headerBlock);
 
-            // ── BLOQUE 2: Mensajes del Chat Individuales ──
             messages.forEach(m => {
                 const msgBlock = document.createElement('div');
                 msgBlock.style.padding = '10px 40px';
@@ -146,7 +140,6 @@ export default function MaestroKongChat({ diagnosis, handImages }: MaestroKongCh
                 msgBubble.style.fontSize = '16px';
                 msgBubble.style.whiteSpace = 'pre-wrap';
 
-                // Convertir negritas markdown a HTML
                 let formattedText = m.content.replace(/\*\*(.*?)\*\*/g, '<strong style="color: #fbbf24;">$1</strong>');
 
                 if (m.role === 'user') {
@@ -168,7 +161,6 @@ export default function MaestroKongChat({ diagnosis, handImages }: MaestroKongCh
                 blocksToCapture.push(msgBlock);
             });
 
-            // ── MOTOR ANTI-CORTES (Paginación Inteligente) ──
             const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
             const pdfWidth = pdf.internal.pageSize.getWidth();
             const pdfHeight = pdf.internal.pageSize.getHeight();
@@ -181,11 +173,9 @@ export default function MaestroKongChat({ diagnosis, handImages }: MaestroKongCh
             drawBackground();
             let cursorY = 0;
 
-            // Procesamos y pegamos cada bloque uno por uno
             for (let i = 0; i < blocksToCapture.length; i++) {
                 const block = blocksToCapture[i];
 
-                // Mini pausa para que el navegador asimile los estilos (vital en Safari)
                 await new Promise(resolve => setTimeout(resolve, 50));
 
                 const canvas = await html2canvas(block, {
@@ -200,19 +190,16 @@ export default function MaestroKongChat({ diagnosis, handImages }: MaestroKongCh
                 const imgData = canvas.toDataURL('image/jpeg', 0.85);
                 const blockHeightMm = (canvas.height / canvas.width) * pdfWidth;
 
-                // MAGIA: Si el bloque actual va a rebasar el límite de la página...
-                // ...creamos una página nueva ANTES de pegarlo, dejándolo intacto.
                 if (cursorY + blockHeightMm > pdfHeight - 20) {
                     pdf.addPage();
                     drawBackground();
-                    cursorY = 0; // Reiniciamos el cursor arriba
+                    cursorY = 0;
                 }
 
                 pdf.addImage(imgData, 'JPEG', 0, cursorY, pdfWidth, blockHeightMm);
-                cursorY += blockHeightMm; // Movemos el cursor hacia abajo para el siguiente bloque
+                cursorY += blockHeightMm;
             }
 
-            // ── Paginación y Textos de pie de página ──
             const pageCount = pdf.getNumberOfPages();
             const now = new Date();
             const dateStr = now.toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric' });
@@ -228,9 +215,10 @@ export default function MaestroKongChat({ diagnosis, handImages }: MaestroKongCh
 
             pdf.save(`${dateStr.replace(/\//g, '-')}_TaoHealth.pdf`);
 
-        } catch (error: any) {
+        } catch (error) {
             console.error('Error exporting PDF:', error);
-            alert('Error detallado al generar PDF: ' + (error.message || 'Error de memoria en el navegador.'));
+            const errorMsg = error instanceof Error ? error.message : 'Error de memoria en el navegador.';
+            alert('Error detallado al generar PDF: ' + errorMsg);
         } finally {
             if (tempExportElement && tempExportElement.parentNode) {
                 tempExportElement.parentNode.removeChild(tempExportElement);
