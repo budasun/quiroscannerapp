@@ -125,7 +125,8 @@ export default function MaestroKongChat({ diagnosis, handImages }: MaestroKongCh
                 imagesContainer.appendChild(makeImgWrapper(handImages.right, '✋ Derecha (Yang · Actual)'));
                 headerBlock.appendChild(imagesContainer);
             }
-            tempExportElement.appendChild(headerBlock);
+
+            tempExportElement?.appendChild(headerBlock);
             blocksToCapture.push(headerBlock);
 
             messages.forEach(m => {
@@ -157,7 +158,7 @@ export default function MaestroKongChat({ diagnosis, handImages }: MaestroKongCh
                     msgBubble.innerHTML = `<strong style="color: #8b5cf6; font-size: 18px;">Maestro Kong:</strong><br><br>${formattedText}`;
                 }
                 msgBlock.appendChild(msgBubble);
-                tempExportElement.appendChild(msgBlock);
+                tempExportElement?.appendChild(msgBlock);
                 blocksToCapture.push(msgBlock);
             });
 
@@ -295,19 +296,42 @@ export default function MaestroKongChat({ diagnosis, handImages }: MaestroKongCh
                 if (ellos?.contenido) {
                     newMessages.push({ role: 'assistant', content: `🌍 **ELLOS - Entorno y Sociedad**\n\n${ellos.contenido}` });
                 }
+
+                // 2. Tratamiento MTC (Acupuntura, Hierbas, Dieta)
+                if (data.tratamiento_mtc) {
+                    const mtc = data.tratamiento_mtc;
+                    let mtcText = `☯️ **RECETA CLÍNICA TAOÍSTA**\n\n`;
+
+                    if (mtc.acupuntura?.length) {
+                        mtcText += `📍 **Acupuntura / Digitopuntura:**\n${mtc.acupuntura.map((c: string) => `• ${c}`).join('\n')}\n\n`;
+                    }
+                    if (mtc.herbolaria?.length) {
+                        mtcText += `🍵 **Herbolaria:**\n${mtc.herbolaria.map((c: string) => `• ${c}`).join('\n')}\n\n`;
+                    }
+                    if (mtc.dietetica?.length) {
+                        mtcText += `🥣 **Dietética:**\n${mtc.dietetica.map((c: string) => `• ${c}`).join('\n')}`;
+                    }
+                    newMessages.push({ role: 'assistant', content: mtcText });
+                }
+
+                // 3. Consejos Prácticos + Sueño Taoísta
                 if (data.consejos_practicos) {
                     const consejos = data.consejos_practicos;
-                    let consejosText = `✨ **CONSEJOS PRÁCTICOS**\n\n`;
-                    if (consejos.fisicos?.length) {
-                        consejosText += `🌿 **Físicos:**\n${consejos.fisicos.map((c: string) => `• ${c}`).join('\n')}\n\n`;
-                    }
-                    if (consejos.mentales?.length) {
-                        consejosText += `🧠 **Mentales:**\n${consejos.mentales.map((c: string) => `• ${c}`).join('\n')}\n\n`;
-                    }
-                    if (consejos.espirituales?.length) {
-                        consejosText += `✨ **Espirituales:**\n${consejos.espirituales.map((c: string) => `• ${c}`).join('\n')}`;
-                    }
+                    let consejosText = `✨ **HÁBITOS DE SANACIÓN**\n\n`;
+                    if (consejos.fisicos?.length) consejosText += `🏃 **Físicos:**\n${consejos.fisicos.map((c: string) => `• ${c}`).join('\n')}\n\n`;
+                    if (consejos.mentales?.length) consejosText += `🧠 **Mentales:**\n${consejos.mentales.map((c: string) => `• ${c}`).join('\n')}\n\n`;
+                    if (consejos.espirituales?.length) consejosText += `✨ **Espirituales:**\n${consejos.espirituales.map((c: string) => `• ${c}`).join('\n')}\n\n`;
+                    if (consejos.sueno_taoista?.length) consejosText += `🌙 **Higiene del Sueño (MTC):**\n${consejos.sueno_taoista.map((c: string) => `• ${c}`).join('\n')}`;
+
                     newMessages.push({ role: 'assistant', content: consejosText });
+                }
+
+                // 4. Pregunta de Despertar (Llamado a la acción)
+                if (data.pregunta_despertar) {
+                    newMessages.push({
+                        role: 'assistant',
+                        content: `👁️ **DESPERTAR DE CONSCIENCIA**\n\n${data.pregunta_despertar}\n\n*Por favor, respóndeme aquí abajo para ajustar tu receta y recomendaciones.*`
+                    });
                 }
 
                 setMessages(newMessages);
