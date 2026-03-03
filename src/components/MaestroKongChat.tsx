@@ -4,7 +4,6 @@ import React, { useState, useRef, useEffect } from 'react';
 import { Send, MessageSquare, Sparkles, Scroll, BookOpen, Download, Loader2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ChatMessage, DiagnosisResult } from '@/types';
-// @ts-ignore
 import html2canvas from 'html2canvas-pro';
 import jsPDF from 'jspdf';
 
@@ -55,6 +54,7 @@ export default function MaestroKongChat({ diagnosis, handImages }: MaestroKongCh
             await new Promise(resolve => setTimeout(resolve, 800));
             const isMobile = window.innerWidth < 768;
 
+            // ── Contenedor maestro off-screen ──
             tempExportElement = document.createElement('div');
             tempExportElement.style.width = isMobile ? '700px' : '900px';
             tempExportElement.style.backgroundColor = '#050510';
@@ -67,6 +67,7 @@ export default function MaestroKongChat({ diagnosis, handImages }: MaestroKongCh
 
             const blocksToCapture: HTMLElement[] = [];
 
+            // ── BLOQUE 1: Cabecera y Fotos ──
             const headerBlock = document.createElement('div');
             headerBlock.style.padding = '40px 40px 10px 40px';
             headerBlock.style.backgroundColor = '#050510';
@@ -125,10 +126,12 @@ export default function MaestroKongChat({ diagnosis, handImages }: MaestroKongCh
                 imagesContainer.appendChild(makeImgWrapper(handImages.right, '✋ Derecha (Yang · Actual)'));
                 headerBlock.appendChild(imagesContainer);
             }
-
-            tempExportElement?.appendChild(headerBlock);
+            if (tempExportElement) {
+                tempExportElement.appendChild(headerBlock);
+            }
             blocksToCapture.push(headerBlock);
 
+            // ── BLOQUE 2: Mensajes del Chat ──
             messages.forEach(m => {
                 const msgBlock = document.createElement('div');
                 msgBlock.style.padding = '10px 40px';
@@ -158,10 +161,13 @@ export default function MaestroKongChat({ diagnosis, handImages }: MaestroKongCh
                     msgBubble.innerHTML = `<strong style="color: #8b5cf6; font-size: 18px;">Maestro Kong:</strong><br><br>${formattedText}`;
                 }
                 msgBlock.appendChild(msgBubble);
-                tempExportElement?.appendChild(msgBlock);
+                if (tempExportElement) {
+                    tempExportElement.appendChild(msgBlock);
+                }
                 blocksToCapture.push(msgBlock);
             });
 
+            // ── MOTOR ANTI-CORTES (Paginación + Guillotina) ──
             const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
             const pdfWidth = pdf.internal.pageSize.getWidth();
             const pdfHeight = pdf.internal.pageSize.getHeight();
@@ -172,11 +178,12 @@ export default function MaestroKongChat({ diagnosis, handImages }: MaestroKongCh
             };
 
             drawBackground();
-            let cursorY = 0;
+            let cursorY = 20; // Margen inicial
+            const marginYMm = 20;
+            const maxPageHeightMm = pdfHeight - (marginYMm * 2);
 
             for (let i = 0; i < blocksToCapture.length; i++) {
                 const block = blocksToCapture[i];
-
                 await new Promise(resolve => setTimeout(resolve, 50));
 
                 const canvas = await html2canvas(block, {
@@ -188,19 +195,39 @@ export default function MaestroKongChat({ diagnosis, handImages }: MaestroKongCh
                     logging: false
                 });
 
-                const imgData = canvas.toDataURL('image/jpeg', 0.85);
-                const blockHeightMm = (canvas.height / canvas.width) * pdfWidth;
+                const maxPageHeightPx = maxPageHeightMm * (canvas.width / pdfWidth);
+                let remainingHeightPx = canvas.height;
+                let currentYPx = 0;
 
-                if (cursorY + blockHeightMm > pdfHeight - 20) {
-                    pdf.addPage();
-                    drawBackground();
-                    cursorY = 0;
+                // Guillotina: Rebana el bloque si es más grande que la hoja
+                while (remainingHeightPx > 0) {
+                    const sliceHeightPx = Math.min(remainingHeightPx, maxPageHeightPx);
+
+                    const sliceCanvas = document.createElement('canvas');
+                    sliceCanvas.width = canvas.width;
+                    sliceCanvas.height = sliceHeightPx;
+                    const ctx = sliceCanvas.getContext('2d');
+                    if (ctx) {
+                        ctx.drawImage(canvas, 0, currentYPx, canvas.width, sliceHeightPx, 0, 0, canvas.width, sliceHeightPx);
+                    }
+
+                    const imgData = sliceCanvas.toDataURL('image/jpeg', 0.85);
+                    const sliceHeightMm = (sliceHeightPx / canvas.width) * pdfWidth;
+
+                    if (cursorY + sliceHeightMm > pdfHeight - marginYMm) {
+                        pdf.addPage();
+                        drawBackground();
+                        cursorY = marginYMm;
+                    }
+
+                    pdf.addImage(imgData, 'JPEG', 0, cursorY, pdfWidth, sliceHeightMm);
+                    cursorY += sliceHeightMm;
+                    currentYPx += sliceHeightPx;
+                    remainingHeightPx -= sliceHeightPx;
                 }
-
-                pdf.addImage(imgData, 'JPEG', 0, cursorY, pdfWidth, blockHeightMm);
-                cursorY += blockHeightMm;
             }
 
+            // ── Paginación ──
             const pageCount = pdf.getNumberOfPages();
             const now = new Date();
             const dateStr = now.toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric' });
@@ -216,9 +243,9 @@ export default function MaestroKongChat({ diagnosis, handImages }: MaestroKongCh
 
             pdf.save(`${dateStr.replace(/\//g, '-')}_TaoHealth.pdf`);
 
-        } catch (error) {
+        } catch (error: any) {
             console.error('Error exporting PDF:', error);
-            const errorMsg = error instanceof Error ? error.message : 'Error de memoria en el navegador.';
+            const errorMsg = error && error.message ? error.message : 'Error desconocido';
             alert('Error detallado al generar PDF: ' + errorMsg);
         } finally {
             if (tempExportElement && tempExportElement.parentNode) {
@@ -237,6 +264,10 @@ export default function MaestroKongChat({ diagnosis, handImages }: MaestroKongCh
         setIsLoading(true);
 
         try {
+            const radar = diagnosis.niveles_radar;
+            const keys = Object.keys(radar) as Array<keyof typeof radar>;
+            const elementoDominante = keys.reduce((a, b) => radar[a] > radar[b] ? a : b);
+
             const response = await fetch('/api/chat', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -244,7 +275,7 @@ export default function MaestroKongChat({ diagnosis, handImages }: MaestroKongCh
                     message: input,
                     diagnosis: {
                         organo_afectado: diagnosis.diagnostico_wang.organo_afectado,
-                        elemento_dominante: Object.entries(diagnosis.niveles_radar).reduce((a, b) => a[1] > b[1] ? a : b)[0]
+                        elemento_dominante: elementoDominante
                     },
                     history: messages
                 })
@@ -255,9 +286,10 @@ export default function MaestroKongChat({ diagnosis, handImages }: MaestroKongCh
             const data = await response.json();
             const assistantMessage: ChatMessage = { role: 'assistant', content: data.content };
             setMessages(prev => [...prev, assistantMessage]);
-        } catch (error) {
+        } catch (error: any) {
             console.error(error);
-            setMessages(prev => [...prev, { role: 'assistant', content: 'Las nubes oscurecen mi visión en este momento. Inténtalo de nuevo más tarde.' }]);
+            const errorAssistantMessage: ChatMessage = { role: 'assistant', content: 'Las nubes oscurecen mi visión en este momento. Inténtalo de nuevo más tarde.' };
+            setMessages(prev => [...prev, errorAssistantMessage]);
         } finally {
             setIsLoading(false);
         }
@@ -297,7 +329,16 @@ export default function MaestroKongChat({ diagnosis, handImages }: MaestroKongCh
                     newMessages.push({ role: 'assistant', content: `🌍 **ELLOS - Entorno y Sociedad**\n\n${ellos.contenido}` });
                 }
 
-                // 2. Tratamiento MTC (Acupuntura, Hierbas, Dieta)
+                // 2. Pronóstico de Evolución
+                if (data.pronostico_evolucion) {
+                    const { camino_enfermedad, consecuencias_cronicas } = data.pronostico_evolucion;
+                    newMessages.push({
+                        role: 'assistant',
+                        content: `⚖️ **PRONÓSTICO DE EVOLUCIÓN**\n\n**Camino de la enfermedad:** ${camino_enfermedad}\n\n**Consecuencias crónicas:** ${consecuencias_cronicas}`
+                    });
+                }
+
+                // 3. Tratamiento MTC (Acupuntura, Herbolaria, Dieta)
                 if (data.tratamiento_mtc) {
                     const mtc = data.tratamiento_mtc;
                     let mtcText = `☯️ **RECETA CLÍNICA TAOÍSTA**\n\n`;
@@ -305,8 +346,8 @@ export default function MaestroKongChat({ diagnosis, handImages }: MaestroKongCh
                     if (mtc.acupuntura?.length) {
                         mtcText += `📍 **Acupuntura / Digitopuntura:**\n${mtc.acupuntura.map((c: string) => `• ${c}`).join('\n')}\n\n`;
                     }
-                    if (mtc.herbolaria?.length) {
-                        mtcText += `🍵 **Herbolaria:**\n${mtc.herbolaria.map((c: string) => `• ${c}`).join('\n')}\n\n`;
+                    if (mtc.herbolaria_mexicana_y_china?.length) {
+                        mtcText += `🍵 **Herbolaria Integral:**\n${mtc.herbolaria_mexicana_y_china.map((c: string) => `• ${c}`).join('\n')}\n\n`;
                     }
                     if (mtc.dietetica?.length) {
                         mtcText += `🥣 **Dietética:**\n${mtc.dietetica.map((c: string) => `• ${c}`).join('\n')}`;
@@ -314,7 +355,7 @@ export default function MaestroKongChat({ diagnosis, handImages }: MaestroKongCh
                     newMessages.push({ role: 'assistant', content: mtcText });
                 }
 
-                // 3. Consejos Prácticos + Sueño Taoísta
+                // 4. Consejos Prácticos + Sueño Taoísta
                 if (data.consejos_practicos) {
                     const consejos = data.consejos_practicos;
                     let consejosText = `✨ **HÁBITOS DE SANACIÓN**\n\n`;
@@ -326,7 +367,7 @@ export default function MaestroKongChat({ diagnosis, handImages }: MaestroKongCh
                     newMessages.push({ role: 'assistant', content: consejosText });
                 }
 
-                // 4. Pregunta de Despertar (Llamado a la acción)
+                // 5. Pregunta de Despertar
                 if (data.pregunta_despertar) {
                     newMessages.push({
                         role: 'assistant',
@@ -338,7 +379,7 @@ export default function MaestroKongChat({ diagnosis, handImages }: MaestroKongCh
             } else {
                 throw new Error('Formato de respuesta inválido');
             }
-        } catch (error) {
+        } catch (error: any) {
             console.error(error);
             setMessages([{ role: 'assistant', content: 'Las nubes oscurecen mi visión en este momento. Inténtalo de nuevo más tarde.' }]);
         } finally {

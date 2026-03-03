@@ -18,6 +18,22 @@ export interface DiagnosisResult {
     nosotros: { titulo: string; detalle: string };
     ellos: { titulo: string; detalle: string };
   };
+  pronostico_evolucion?: {
+    camino_enfermedad: string;
+    consecuencias_cronicas: string;
+  };
+  tratamiento_mtc?: {
+    acupuntura: string[];
+    herbolaria_mexicana_y_china: string[];
+    dietetica: string[];
+  };
+  consejos_practicos?: {
+    fisicos: string[];
+    mentales: string[];
+    espirituales: string[];
+    sueno_taoista?: string[];
+  };
+  pregunta_despertar?: string;
 }
 
 export interface ChatMessage {
