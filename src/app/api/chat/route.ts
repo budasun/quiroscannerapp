@@ -9,17 +9,21 @@ const OPENROUTER_FALLBACK_MODELS = [
     'meta-llama/llama-3.2-3b-instruct:free'
 ];
 
-const SYSTEM_PROMPT_TEMPLATE = `Eres el Maestro Kong, un sabio taoísta antiguo, compasivo pero directo.
-No eres una IA, eres un guía espiritual.
+// AQUÍ ESTÁ TU PROMPT NUTRIDO SIN CAMBIAR TU ESTRUCTURA
+const SYSTEM_PROMPT_TEMPLATE = `Eres el Gran Maestro Taoísta Wang Chenxia, un sabio experto en Medicina Tradicional China (MTC) y Herbolaria Milenaria Mexicana.
 
-CONTEXTO DEL USUARIO (Ya diagnosticado):
+CONTEXTO DEL USUARIO:
 - Órgano débil: {organo_afectado}
 - Elemento desequilibrado: {elemento_dominante}
 
 TU MISIÓN:
-Responde a la pregunta del usuario con brevedad (máximo 3 frases).
-Usa metáforas de la naturaleza (el río, la montaña, el bambú).
-Da un consejo práctico de salud (hierbas, respiración) mezclado con sabiduría espiritual.`;
+1. Responde con sabiduría mística pero con precisión clínica.
+2. HERBOLARIA MEXICANA: Sugiere siempre una planta de México (ej. Cuachalalate, Gordolobo, Siete Azahares) con su posología.
+3. ACUPUNTURA: Si el usuario pide tratamiento o consejos, sugiere puntos específicos indicando nombre y función.
+4. ADVERTENCIA: Explica brevemente que si no se atiende este {organo_afectado}, el desequilibrio podría moverse hacia otros órganos según el ciclo de control de la MTC.
+5. CIERRE: Finaliza preguntando sutilmente la EDAD y el PESO del usuario para poder precisar las dosis de las infusiones.
+
+Mantén un tono de guía espiritual, compasivo y directo. Máximo 4-5 frases por respuesta.`;
 
 async function fetchWithTimeout(resource: string, options: any = {}, timeoutMs = 15000) {
     const controller = new AbortController();
@@ -35,7 +39,7 @@ async function fetchWithTimeout(resource: string, options: any = {}, timeoutMs =
 }
 
 export async function POST(req: NextRequest) {
-    console.log('--- Iniciando Chat con Maestro Kong ---');
+    console.log('--- Iniciando Chat con Maestro Kong Nutrito ---');
     try {
         const { message, diagnosis, history = [] } = await req.json();
         if (!message || !diagnosis) return NextResponse.json({ error: 'Faltan datos' }, { status: 400 });
@@ -50,7 +54,7 @@ export async function POST(req: NextRequest) {
         if (niveles_radar && typeof niveles_radar === 'object') {
             const entries = Object.entries(niveles_radar);
             if (entries.length > 0) {
-                elementoDominante = entries.reduce((a: any, b: any) => (a[1] || 0) > (b[1] || 0) ? a : b)[0];
+                elementoDominante = entries.reduce((a: any, b: any) => (Number(a[1]) || 0) > (Number(b[1]) || 0) ? a : b)[0];
             }
         }
 
@@ -58,7 +62,7 @@ export async function POST(req: NextRequest) {
             .replace('{organo_afectado}', organo_afectado)
             .replace('{elemento_dominante}', elementoDominante);
 
-        // 1. INTENTO PRINCIPAL: GROQ (Más rápido y estable actualmente)
+        // 1. INTENTO PRINCIPAL: GROQ
         if (groqKey) {
             console.log('🗣️ [Chat] Consultando al Maestro Kong vía Groq...');
             try {
@@ -76,7 +80,7 @@ export async function POST(req: NextRequest) {
                             { role: "user", content: message }
                         ],
                         temperature: 0.7,
-                        max_tokens: 500
+                        max_tokens: 800
                     })
                 }, 15000);
 
@@ -84,29 +88,23 @@ export async function POST(req: NextRequest) {
                     const data = await response.json();
                     const content = data.choices?.[0]?.message?.content;
                     if (content) {
-                        console.log('✅ Maestro Kong respondió vía Groq');
                         return NextResponse.json({ content });
                     }
                 }
-                throw new Error(`Groq falló con status ${response.status}`);
             } catch (err: any) {
-                console.error('⚠️ Maestro Kong (Groq) ocupado:', err.message);
+                console.error('⚠️ Groq ocupado, intentando respaldo...');
             }
         }
 
         // 2. RESPALDO: OPENROUTER
         if (openRouterKey) {
-            console.log('🔄 Intentando respaldo con OpenRouter...');
             for (const model of OPENROUTER_FALLBACK_MODELS) {
                 try {
-                    console.log(`[Chat] Probando: ${model}`);
                     const response = await fetchWithTimeout('https://openrouter.ai/api/v1/chat/completions', {
                         method: 'POST',
                         headers: {
                             'Authorization': `Bearer ${openRouterKey}`,
                             'Content-Type': 'application/json',
-                            'HTTP-Referer': 'https://tao-health-scanner.vercel.app',
-                            'X-Title': 'Tao Health Scanner',
                         },
                         body: JSON.stringify({
                             model: model,
@@ -121,14 +119,10 @@ export async function POST(req: NextRequest) {
 
                     if (response.ok) {
                         const data = await response.json();
-                        const content = data.choices?.[0]?.message?.content;
-                        if (content) {
-                            console.log(`✅ Maestro Kong respondió vía ${model}`);
-                            return NextResponse.json({ content });
-                        }
+                        return NextResponse.json({ content: data.choices?.[0]?.message?.content });
                     }
                 } catch (err) {
-                    console.error(`[Chat] Falló la conexión con ${model}`);
+                    continue;
                 }
             }
         }
@@ -136,9 +130,8 @@ export async function POST(req: NextRequest) {
         throw new Error('Todas las vías de comunicación cerradas.');
 
     } catch (error: any) {
-        console.error('❌ Error fatal en /api/chat:', error.message);
         return NextResponse.json({
-            error: 'El Maestro Kong está en meditación profunda. Intenta más tarde.',
+            error: 'El Maestro Kong está en meditación profunda.',
             details: error.message
         }, { status: 500 });
     }

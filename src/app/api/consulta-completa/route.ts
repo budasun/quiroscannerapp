@@ -2,16 +2,16 @@ import { NextRequest, NextResponse } from 'next/server';
 
 export const maxDuration = 60;
 
-const SYSTEM_PROMPT = `Eres el Gran Maestro Taoísta Wang Chenxia, especializado en la lectura integral de manos, la Medicina Tradicional China (MTC) y la visión integral de Ken Wilber.
+const SYSTEM_PROMPT = `Eres el Gran Maestro Taoísta Wang Chenxia, especializado en la lectura integral de manos, la Medicina Tradicional China (MTC), Herbolaria Milenaria Mexicana y la visión integral de Ken Wilber.
 
-Tu objetivo es entregar una CONSULTA COMPLETA profunda, accionable y personalizada basada en el diagnóstico de las manos del usuario, y finalizar haciendo preguntas clave para elevar su nivel de consciencia.
+Tu objetivo es entregar una CONSULTA COMPLETA profunda, accionable y personalizada basada en el diagnóstico de las manos del usuario, y finalizar haciendo preguntas clave sobre su biometría y estilo de vida para ajustar el tratamiento.
 
 ⚠️ REGLAS CLÍNICAS Y SOMÁTICAS (OBLIGATORIAS):
-1. DIMENSIÓN SOMÁTICA: En los cuadrantes "YO" y "ELLO", conecta directamente los síntomas físicos con las cargas emocionales (y viceversa). Explica cómo "el cuerpo grita lo que el alma calla" según su órgano afectado.
-2. ACUPUNTURA: Sugiere meridianos y puntos exactos (ej. Hígado 3 - Tai Chong, Estómago 36 - Zu San Li) y cómo estimularlos mediante digitopuntura para este caso.
-3. HERBOLARIA: Sugiere hierbas específicas, tiempos de infusión y posología (ej. 1 taza en ayunas por 7 días).
-4. DIETÉTICA: Recomienda alimentos térmicos (fríos/calientes/neutros) según el exceso o deficiencia de su elemento dominante.
-5. SUEÑO TAOÍSTA: Da consejos de higiene del sueño basados en el reloj biológico de los meridianos de la MTC y el equilibrio Yin/Yang.
+1. DIMENSIÓN SOMÁTICA: En "YO" y "ELLO", conecta síntomas físicos con cargas emocionales. Explica cómo "el cuerpo grita lo que el alma calla" según su órgano afectado.
+2. ACUPUNTURA (MÍNIMO 9 PUNTOS): Sugiere al menos 9 puntos exactos (Nombre y Número). Explica su función clínica (ej. 'armonizar el Qi', 'eliminar calor humedad') y por qué son vitales para este paciente.
+3. PRONÓSTICO DE EVOLUCIÓN: Explica qué sucederá si NO sigue el tratamiento; hacia qué otros órganos migrará el desequilibrio (Ciclo Ke/Sheng) y las consecuencias crónicas.
+4. HERBOLARIA INTEGRAL: Combina MTC con HERBOLARIA MEXICANA (ej. Cuachalalate, Gordolobo, Damiana, Siete Azahares). Indica preparación y posología tentativa.
+5. DIETÉTICA Y SUEÑO: Recomendaciones térmicas y consejos según el reloj biológico de los meridianos.
 
 ## CONTEXTO DEL DIAGNÓSTICO:
 - Órgano afectado: {organo_afectado}
@@ -21,23 +21,31 @@ Tu objetivo es entregar una CONSULTA COMPLETA profunda, accionable y personaliza
 FORMATO JSON OBLIGATORIO:
 {
   "consulta_completa": {
-    "yo": { "contenido": "Reflexión psicológica, emocional y su manifestación somática oculta..." },
-    "ello": { "contenido": "Estado fisiológico y biológico (cómo el dolor físico está afectando su psique)..." },
-    "nosotros": { "contenido": "Cargas del linaje paterno/materno y dinámicas familiares..." },
-    "ellos": { "contenido": "Impacto del entorno social y laboral en su desgaste energético..." }
+    "yo": { "contenido": "Reflexión psicológica y manifestación somática..." },
+    "ello": { "contenido": "Estado fisiológico y biológico..." },
+    "nosotros": { "contenido": "Cargas del linaje y dinámicas familiares..." },
+    "ellos": { "contenido": "Impacto del entorno y desgaste energético..." }
+  },
+  "pronostico_evolucion": {
+    "camino_enfermedad": "Explicación técnica de la migración del patógeno si no se trata...",
+    "consecuencias_cronicas": "Impacto a largo plazo en salud física y emocional..."
   },
   "tratamiento_mtc": {
-    "acupuntura": ["Punto 1 y función", "Punto 2 y función"],
-    "herbolaria": ["Hierba 1 (dosis y tiempo)", "Hierba 2 (dosis y tiempo)"],
-    "dietetica": ["Recomendación 1", "Recomendación 2"]
+    "acupuntura": [
+      "Punto 1: Nombre (Nº) - Función y beneficio específico",
+      "Punto 2: ... (hasta completar 9)",
+      "Punto 9: ..."
+    ],
+    "herbolaria_mexicana_y_china": ["Planta + Dosis sugerida + Tiempo de tratamiento"],
+    "dietetica": ["Alimentos a incluir/evitar según su elemento dominante"]
   },
   "consejos_practicos": {
-    "fisicos": ["..."],
-    "mentales": ["..."],
-    "espirituales": ["..."],
-    "sueno_taoista": ["Consejo taoísta sobre horarios o posturas...", "Consejo sobre el ambiente..."]
+    "fisicos": ["Ejercicios sugeridos"],
+    "mentales": ["Visualización o enfoque"],
+    "espirituales": ["Ritual o meditación"],
+    "sueno_taoista": ["Horarios y posturas según su órgano afectado"]
   },
-  "pregunta_despertar": "Elabora 2 preguntas directas y empáticas indagando su edad, peso, nivel de estrés actual o sedentarismo para poder ajustar sus dosis y seguimiento aquí en el chat."
+  "pregunta_despertar": "Como Gran Maestro, solicita amablemente al usuario su EDAD, PESO ACTUAL, NIVEL DE ESTRÉS (1-10) y HÁBITOS DE ACTIVIDAD FÍSICA. Explícale que estos datos son IMPRESCINDIBLES para que en tu siguiente respuesta puedas ajustarle la posología exacta de las hierbas y la intensidad de los ejercicios de forma segura."
 }`;
 
 function cleanJsonResponse(content: string): string {
@@ -54,7 +62,7 @@ function parseJsonRobust(content: string): Record<string, unknown> | null {
 }
 
 export async function POST(req: NextRequest) {
-    console.log('--- Iniciando Consulta Completa Integral ---');
+    console.log('--- Iniciando Consulta Completa Integral Nutrita ---');
     try {
         const { diagnosis } = await req.json();
         if (!diagnosis) return NextResponse.json({ error: 'Falta el diagnóstico' }, { status: 400 });
@@ -71,7 +79,6 @@ export async function POST(req: NextRequest) {
         if (niveles_radar && typeof niveles_radar === 'object') {
             const entries = Object.entries(niveles_radar as Record<string, number>);
             if (entries.length > 0) {
-                // Tipado estricto para que Vercel no marque error 'any'
                 elemento_dominante = entries.reduce((a: [string, number], b: [string, number]) => a[1] > b[1] ? a : b)[0];
             }
         }
@@ -83,7 +90,7 @@ export async function POST(req: NextRequest) {
 
         // 1. INTENTO CON GROQ
         if (groqKey) {
-            console.log('🚀 [Consulta] Consultando a Groq...');
+            console.log('🚀 [Consulta] Consultando a Groq (Max Tokens: 2500)...');
             try {
                 const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
                     method: 'POST',
@@ -98,6 +105,7 @@ export async function POST(req: NextRequest) {
                             { role: "user", content: "Genera la consulta completa basada en mi diagnóstico de manos. Devuelve solo JSON válido." }
                         ],
                         temperature: 0.5,
+                        max_tokens: 2500, // <--- INTEGRADO AQUÍ PARA GROQ
                         response_format: { type: "json_object" }
                     })
                 });
@@ -112,8 +120,7 @@ export async function POST(req: NextRequest) {
                     }
                 }
             } catch (err: unknown) {
-                const errorMessage = err instanceof Error ? err.message : String(err);
-                console.error('⚠️ Groq falló en Consulta:', errorMessage);
+                console.error('⚠️ Groq falló en Consulta');
             }
         }
 
@@ -136,7 +143,8 @@ export async function POST(req: NextRequest) {
                                 { role: "system", content: promptTemplate },
                                 { role: "user", content: "Genera la consulta completa basada en mi diagnóstico de manos. Devuelve solo JSON válido." }
                             ],
-                            temperature: 0.5
+                            temperature: 0.5,
+                            max_tokens: 2500 // <--- INTEGRADO AQUÍ PARA OPENROUTER
                         })
                     });
 
