@@ -2,64 +2,66 @@ import { NextRequest, NextResponse } from 'next/server';
 
 export const maxDuration = 60;
 
-const MODELS = [
-    'meta-llama/llama-3.2-11b-vision-instruct:free',
-    'meta-llama/llama-3.1-70b-instruct',
-    'meta-llama/llama-3.1-8b-instruct',
-];
-
 const SYSTEM_PROMPT = `Actúa como el Gran Maestro Wang Chenxia (Diagnóstico por la mano) y Ken Wilber (Visión Integral).
 Tu tarea es hacer una DISECCIÓN VISUAL de estas manos (Izquierda=Ancestral/Yin, Derecha=Actual/Yang).
 
 ⚠️ INSTRUCCIONES VISUALES (NO ALUCINES):
 1. Busca EVIDENCIA FÍSICA: Lunares, manchas, venas azules, líneas rotas, islas, color de uñas.
 2. CONTRASTA: ¿Qué cambió de la izquierda a la derecha?
-3. MÉTODO WANG: Si diagnosticas "Hígado", debes decir "porque veo un tono azulado en el monte de Marte".
+3. En los "niveles_radar", calcula un valor real del 1 al 100 basado en lo que observas.
 
-FORMATO JSON OBLIGATORIO (Responde SOLO esto, sin texto antes ni después):
+FORMATO JSON OBLIGATORIO (Responde SOLO esto, sin texto antes ni después, respeta las comillas dobles):
 {
-  "mensaje_maestro": "Frase del I Ching basada en la energía detectada.",
+  "mensaje_maestro": "Frase mística del I Ching",
   "diagnostico_wang": {
-    "observacion_visual": "Texto detallado describiendo las marcas físicas reales que ves en las fotos.",
-    "organo_afectado": "Órgano principal (Ej: Hígado, Corazón, Riñón).",
-    "significado_mtc": "Explicación técnica de Medicina Tradicional China."
+    "observacion_visual": "Describe las marcas físicas reales que ves en las palmas.",
+    "organo_afectado": "Hígado, Corazón, Riñón, Bazo o Pulmón.",
+    "significado_mtc": "Explicación en Medicina Tradicional China."
   },
   "niveles_radar": { 
-    "fuego": 50, "tierra": 50, "metal": 50, "agua": 50, "madera": 50 
+    "fuego": 85, "tierra": 60, "metal": 45, "agua": 70, "madera": 55 
   },
   "cuadrantes_integral": {
     "yo": { "titulo": "Mente (Yo)", "detalle": "Estado psicológico individual visible." },
     "ello": { "titulo": "Cuerpo (Ello)", "detalle": "Estado biológico y físico." },
-    "nosotros": { "titulo": "Ancestros (Nosotros)", "detalle": "Cargas familiares o linaje (Mano Izquierda)." },
-    "ellos": { "titulo": "Entorno (Ellos)", "detalle": "Impacto social/laboral actual (Mano Derecha)." }
+    "nosotros": { "titulo": "Ancestros (Nosotros)", "detalle": "Cargas familiares (Mano Izq)." },
+    "ellos": { "titulo": "Entorno (Ellos)", "detalle": "Impacto social actual (Mano Der)." }
   }
 }`;
 
-async function fetchWithTimeout(resource: string, options: any = {}) {
-    const { timeout = 15000 } = options;
-    const controller = new AbortController();
-    const id = setTimeout(() => controller.abort(), timeout);
-    const response = await fetch(resource, {
-        ...options,
-        signal: controller.signal,
-    });
-    clearTimeout(id);
-    return response;
+function cleanJsonResponse(content: string): string {
+    let cleaned = content.trim();
+    if (cleaned.startsWith('```json')) cleaned = cleaned.replace(/^```json/, '').replace(/```$/, '');
+    else if (cleaned.startsWith('```')) cleaned = cleaned.replace(/^```/, '').replace(/```$/, '');
+    const jsonMatch = cleaned.match(/\{[\s\S]*\}/);
+    return jsonMatch ? jsonMatch[0].trim() : cleaned;
 }
 
-function cleanJsonResponse(content: string) {
-    // Remove markdown code blocks if present
-    let cleaned = content.trim();
-    if (cleaned.startsWith('```json')) {
-        cleaned = cleaned.replace(/^```json/, '').replace(/```$/, '');
-    } else if (cleaned.startsWith('```')) {
-        cleaned = cleaned.replace(/^```/, '').replace(/```$/, '');
+function parseJsonRobust(content: string): object | null {
+    try { return JSON.parse(cleanJsonResponse(content)); }
+    catch { return null; }
+}
+
+function validateAndFixDiagnosis(parsed: { [key: string]: unknown }): object | null {
+    const requiredFields = ['mensaje_maestro', 'diagnostico_wang', 'niveles_radar', 'cuadrantes_integral'];
+    for (const f of requiredFields) if (!parsed[f]) return null;
+
+    const wang = parsed.diagnostico_wang as { [key: string]: unknown };
+    if (!wang || !wang.observacion_visual || !wang.organo_afectado || !wang.significado_mtc) return null;
+
+    const radar = parsed.niveles_radar as { [key: string]: unknown };
+    if (!radar) return null;
+
+    const radarKeys = ['fuego', 'tierra', 'metal', 'agua', 'madera'];
+    for (const key of radarKeys) {
+        if (typeof radar[key] !== 'number') radar[key] = 50;
     }
-    return cleaned.trim();
+
+    return parsed;
 }
 
 export async function POST(req: NextRequest) {
-    console.log('--- Iniciando Análisis Tao ---');
+    console.log('--- Iniciando Análisis Tao (Vía Groq Turbo) ---');
     try {
         const { leftHand, rightHand } = await req.json();
 
@@ -67,93 +69,105 @@ export async function POST(req: NextRequest) {
             return NextResponse.json({ error: 'Faltan las imágenes de las manos' }, { status: 400 });
         }
 
-        const apiKey = process.env.OPENROUTER_API_KEY;
-        if (!apiKey) {
-            console.error('Error: OPENROUTER_API_KEY no encontrada');
-            return NextResponse.json({ error: 'API Key no configurada' }, { status: 500 });
+        const groqKey = process.env.GROQ_API_KEY;
+        if (!groqKey) {
+            console.error('❌ Error: GROQ_API_KEY no encontrada en .env.local');
+            return NextResponse.json({ error: 'Llave de Groq no configurada' }, { status: 500 });
         }
 
-        let lastError = null;
+        const MODELS_TO_TRY = [
+            "meta-llama/llama-4-scout-17b-16e-instruct",
+            "meta-llama/llama-4-maverick-17b-128e-instruct",
+            "qwen/qwen3-32b"
+        ];
 
-        for (const model of MODELS) {
+        let contentText = "";
+        let success = false;
+        let lastError = "";
+
+        for (const model of MODELS_TO_TRY) {
+            console.log(`📡 Intentando con ${model}...`);
             try {
-                console.log(`Intentando con modelo: ${model}`);
+                // Qwen3 en Groq actualmente requiere contenido como string simple
+                const isQwen = model.toLowerCase().includes('qwen');
 
-                let userContent;
-                if (model.includes('vision')) {
-                    userContent = [
-                        { type: "text", text: 'El usuario ha enviado fotos de ambas manos (izquierda y derecha). Realiza un diagnóstico completo basado en los principios de Wang Chenxia y la Psicología Integral de Ken Wilber. Genera valores realistas y variados para los niveles de radar. Responde estrictamente en formato JSON.' },
-                        { type: "image_url", image_url: { url: leftHand } },
-                        { type: "image_url", image_url: { url: rightHand } }
-                    ];
-                } else {
-                    userContent = 'El usuario ha enviado fotos de ambas manos (izquierda y derecha). Realiza un diagnóstico completo basado en los principios de Wang Chenxia y la Psicología Integral de Ken Wilber. Genera valores realistas y variados para los niveles de radar. Responde estrictamente en formato JSON.';
-                }
+                const payload = {
+                    model: model,
+                    messages: [
+                        { role: "system", content: SYSTEM_PROMPT },
+                        {
+                            role: "user",
+                            content: isQwen
+                                ? `Analiza ambas manos (IZQUIERDA = Yin, DERECHA = Yang). Responde en JSON.\n\nImagen 1: ${leftHand}\n\nImagen 2: ${rightHand}`
+                                : [
+                                    { type: "text", text: "Analiza ambas manos (IZQUIERDA = energía ancestral/Yin, DERECHA = energía actual/Yang). Busca marcas físicas reales: lunares, manchas, venas, color de uñas, líneas. Responde ÚNICAMENTE con JSON válido." },
+                                    { type: "image_url", image_url: { url: leftHand } },
+                                    { type: "image_url", image_url: { url: rightHand } }
+                                ]
+                        }
+                    ],
+                    temperature: 0.5,
+                    max_tokens: 1024
+                };
 
-                const response = await fetchWithTimeout('https://openrouter.ai/api/v1/chat/completions', {
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 30000); // 30s para modelos grandes
+
+                const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
                     method: 'POST',
                     headers: {
-                        'Authorization': `Bearer ${apiKey}`,
-                        'Content-Type': 'application/json',
-                        'HTTP-Referer': 'https://tao-health-scanner.vercel.app',
-                        'X-Title': 'Tao Health Scanner',
+                        'Authorization': `Bearer ${groqKey}`,
+                        'Content-Type': 'application/json'
                     },
-                    body: JSON.stringify({
-                        model: model,
-                        messages: [
-                            {
-                                role: 'system',
-                                content: SYSTEM_PROMPT,
-                            },
-                            {
-                                role: 'user',
-                                content: userContent,
-                            },
-                        ],
-                        // Algunos modelos gratuitos pueden fallar con response_format, así que lo manejamos con el prompt
-                    }),
-                    timeout: 45000, // Increased timeout for vision
+                    body: JSON.stringify(payload),
+                    signal: controller.signal
                 });
 
-                if (!response.ok) {
-                    const errorData = await response.json();
-                    console.error(`Error de API en modelo ${model}:`, errorData);
-                    if (response.status === 429 || response.status >= 500) {
-                        lastError = errorData;
-                        continue;
+                clearTimeout(timeoutId);
+
+                if (response.ok) {
+                    const data = await response.json() as any;
+                    contentText = data.choices?.[0]?.message?.content;
+                    if (contentText) {
+                        console.log(`✅ Éxito con ${model}`);
+                        success = true;
+                        break;
                     }
-                    throw new Error(errorData.error?.message || 'Error en la API');
+                } else {
+                    const errDetail = await response.text();
+                    lastError = `Status ${response.status}: ${errDetail}`;
+                    console.warn(`⚠️ ${model} falló: ${lastError}`);
                 }
-
-                const data = await response.json();
-                console.log(`Respuesta recibida de ${model}`);
-
-                const content = data.choices[0].message.content;
-                const cleanedContent = cleanJsonResponse(content);
-
-                try {
-                    const parsed = JSON.parse(cleanedContent);
-                    return NextResponse.json(parsed);
-                } catch (parseErr) {
-                    console.error('Error parseando JSON de la IA:', content);
-                    lastError = new Error('La IA no respondió en el formato místico correcto.');
-                    continue;
-                }
-
             } catch (err: any) {
-                console.error(`Fallo en el intento con ${model}:`, err.message);
-                lastError = err;
-                continue;
+                lastError = err.message;
+                console.warn(`⚠️ Error de red/timeout con ${model}: ${lastError}`);
             }
         }
 
-        return NextResponse.json({
-            error: 'No se pudo obtener una respuesta de los modelos de IA',
-            details: lastError?.message || 'Error desconocido'
-        }, { status: 500 });
+        if (!success) {
+            throw new Error(`Todos los modelos de Groq fallaron o no respondieron. Último error: ${lastError}`);
+        }
+
+        const parsed = parseJsonRobust(contentText);
+        if (!parsed) {
+            console.error("❌ Groq no devolvió un JSON válido:", contentText);
+            throw new Error('Formato de diagnóstico inválido');
+        }
+
+        const validated = validateAndFixDiagnosis(parsed as { [key: string]: unknown });
+        if (!validated) {
+            throw new Error('Faltan campos en la respuesta');
+        }
+
+        console.log('✅ ¡Diagnóstico devuelto a la velocidad de la luz!');
+        return NextResponse.json(validated);
 
     } catch (error: any) {
-        console.error('Error fatal en /api/analyze:', error);
-        return NextResponse.json({ error: error.message }, { status: 500 });
+        console.error('❌ Error fatal en /api/analyze:', error.message);
+        return NextResponse.json({
+            error: 'Las nubes de datos están densas. El servidor falló en procesar la imagen.',
+            details: error.message,
+            fallback: true
+        }, { status: 200 });
     }
 }
