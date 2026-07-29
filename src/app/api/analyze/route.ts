@@ -76,12 +76,17 @@ export async function POST(req: NextRequest) {
         }
 
         const MODELS_TO_TRY = [
-            "qwen/qwen3.6-27b"
+            "meta-llama/llama-4-scout-17b-16e-instruct",
+            "meta-llama/llama-4-maverick-17b-128e-instruct",
+            "llama-3.2-11b-vision-preview",
+            "llama-3.2-90b-vision-preview",
+            "llava-v1.5-7b-4096-preview"
         ];
 
         let contentText = "";
         let success = false;
         let lastError = "";
+        let modelUsed = "";
 
         for (const model of MODELS_TO_TRY) {
             console.log(`📡 Intentando con ${model}...`);
@@ -104,7 +109,7 @@ export async function POST(req: NextRequest) {
                 };
 
                 const controller = new AbortController();
-                const timeoutId = setTimeout(() => controller.abort(), 30000);
+                const timeoutId = setTimeout(() => controller.abort(), 20000);
 
                 const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
                     method: 'POST',
@@ -122,6 +127,7 @@ export async function POST(req: NextRequest) {
                     const data = await response.json() as any;
                     contentText = data.choices?.[0]?.message?.content;
                     if (contentText) {
+                        modelUsed = model;
                         console.log(`✅ Éxito con ${model}`);
                         success = true;
                         break;
@@ -153,7 +159,10 @@ export async function POST(req: NextRequest) {
         }
 
         console.log('✅ ¡Diagnóstico devuelto a la velocidad de la luz!');
-        return NextResponse.json(validated);
+        return NextResponse.json({
+            modelo_utilizado: `Lectura hecha con ${modelUsed}`,
+            ...(validated as object)
+        });
 
     } catch (error: any) {
         console.error('❌ Error fatal en /api/analyze:', error.message);
