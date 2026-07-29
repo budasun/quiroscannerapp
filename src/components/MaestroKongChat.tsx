@@ -145,7 +145,9 @@ export default function MaestroKongChat({ diagnosis, handImages }: MaestroKongCh
                 msgBubble.style.fontSize = '16px';
                 msgBubble.style.whiteSpace = 'pre-wrap';
 
-                let formattedText = m.content.replace(/\*\*(.*?)\*\*/g, '<strong style="color: #fbbf24;">$1</strong>');
+                let formattedText = m.content
+                    .replace(/\*\*(.*?)\*\*/g, '<strong style="color: #fbbf24;">$1</strong>')
+                    .replace(/\*(.*?)\*/g, '<em>$1</em>');
 
                 if (m.role === 'user') {
                     msgBubble.style.backgroundColor = '#8b5cf6';
