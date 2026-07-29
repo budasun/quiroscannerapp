@@ -2,7 +2,7 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import Link from 'next/link';
-import { Send, MessageSquare, Sparkles, Scroll, BookOpen, Download, Loader2, ShieldCheck, Scale } from 'lucide-react';
+import { Send, MessageSquare, Sparkles, Scroll, BookOpen, Download, Loader2, ShieldCheck, Scale, Maximize, Minimize } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ChatMessage, DiagnosisResult } from '@/types';
 import html2canvas from 'html2canvas-pro';
@@ -31,6 +31,7 @@ export default function MaestroKongChat({ diagnosis, handImages }: MaestroKongCh
     const [input, setInput] = useState('');
     const [isLoading, setIsLoading] = useState(false);
     const [isExporting, setIsExporting] = useState(false);
+    const [isExpanded, setIsExpanded] = useState(false);
 
     const scrollRef = useRef<HTMLDivElement>(null);
     const contentRef = useRef<HTMLDivElement>(null);
@@ -440,8 +441,8 @@ export default function MaestroKongChat({ diagnosis, handImages }: MaestroKongCh
     };
 
     return (
-        <div className="max-w-4xl mx-auto py-10" ref={contentRef}>
-            <div className="mystic-card rounded-[3rem] overflow-hidden flex flex-col h-[700px] border border-white/10 shadow-2xl relative">
+        <div className={`${isExpanded ? 'fixed inset-0 z-50' : 'max-w-4xl mx-auto py-10'}`} ref={contentRef}>
+            <div className={`mystic-card rounded-[3rem] overflow-hidden flex flex-col border border-white/10 shadow-2xl relative ${isExpanded ? 'h-screen rounded-none' : 'h-[700px]'}`}>
                 <div className="absolute inset-0 bg-gradient-to-b from-primary/5 via-transparent to-transparent pointer-events-none" />
 
                 {/* Header Responsivo */}
@@ -610,6 +611,14 @@ export default function MaestroKongChat({ diagnosis, handImages }: MaestroKongCh
                         </Link>
                     </div>
                 </div>
+
+                <button
+                    onClick={() => setIsExpanded(!isExpanded)}
+                    className="absolute bottom-4 left-4 z-20 p-2 rounded-lg bg-white/5 border border-white/10 text-muted-foreground hover:text-white hover:bg-white/10 transition-all"
+                    title={isExpanded ? 'Reducir' : 'Expandir'}
+                >
+                    {isExpanded ? <Minimize size={18} /> : <Maximize size={18} />}
+                </button>
             </div>
         </div>
     );
