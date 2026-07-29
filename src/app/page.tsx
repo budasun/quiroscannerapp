@@ -101,7 +101,7 @@ export default function TaoHealthScanner() {
           </div>
           <div className="flex flex-col -space-y-1">
             <h1 className="text-2xl font-black tracking-tighter gold-text">TAO HEALTH</h1>
-            <span className="text-[10px] tracking-[0.3em] font-light text-muted-foreground uppercase pl-1">Scanner Pro</span>
+            <span className="text-[10px] tracking-[0.3em] font-light text-muted-foreground uppercase pl-1">Scanner Pro 1.0</span>
           </div>
         </div>
 
