@@ -208,6 +208,9 @@ export default function TaoHealthScanner() {
             >
               <div className="text-center pt-8">
                 <span className="text-primary font-bold tracking-[0.3em] uppercase text-[10px] mb-4 block">Diagnóstico Finalizado</span>
+                {diagnosis?.modelo_utilizado && (
+                  <p className="text-xs text-muted-foreground/60 font-mono mb-4">{diagnosis.modelo_utilizado}</p>
+                )}
                 <h2 className="text-4xl md:text-6xl font-black text-white">Tu Mapa Energético</h2>
               </div>
 

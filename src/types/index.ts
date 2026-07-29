@@ -1,4 +1,5 @@
 export interface DiagnosisResult {
+  modelo_utilizado?: string;
   mensaje_maestro: string;
   diagnostico_wang: {
     observacion_visual: string;
