@@ -570,6 +570,13 @@ export default function MaestroKongChat({ diagnosis, handImages }: MaestroKongCh
 
                 {/* Input area */}
                 <div className="p-8 bg-white/5 backdrop-blur-2xl border-t border-white/5 relative z-10">
+                    <button
+                        onClick={() => setIsExpanded(!isExpanded)}
+                        className="absolute -top-10 left-0 z-20 p-2 rounded-lg bg-white/5 border border-white/10 text-muted-foreground hover:text-white hover:bg-white/10 transition-all"
+                        title={isExpanded ? 'Reducir' : 'Expandir'}
+                    >
+                        {isExpanded ? <Minimize size={18} /> : <Maximize size={18} />}
+                    </button>
                     <div className="flex gap-4 items-center">
                         <div className="flex-1 relative group">
                             <input
@@ -612,13 +619,6 @@ export default function MaestroKongChat({ diagnosis, handImages }: MaestroKongCh
                     </div>
                 </div>
 
-                <button
-                    onClick={() => setIsExpanded(!isExpanded)}
-                    className="absolute bottom-4 left-4 z-20 p-2 rounded-lg bg-white/5 border border-white/10 text-muted-foreground hover:text-white hover:bg-white/10 transition-all"
-                    title={isExpanded ? 'Reducir' : 'Expandir'}
-                >
-                    {isExpanded ? <Minimize size={18} /> : <Maximize size={18} />}
-                </button>
             </div>
         </div>
     );
