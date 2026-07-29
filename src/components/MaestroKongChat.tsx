@@ -388,6 +388,55 @@ export default function MaestroKongChat({ diagnosis, handImages }: MaestroKongCh
         }
     };
 
+    const handleLecturaQuiromancia = async () => {
+        if (isLoading) return;
+
+        setIsLoading(true);
+        setMessages([]);
+
+        try {
+            const response = await fetch('/api/consulta-quiromancia', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ diagnosis })
+            });
+
+            if (!response.ok) throw new Error('Error en la lectura de quiromancia');
+
+            const data = await response.json();
+
+            if (data.quiromancia) {
+                const newMessages: ChatMessage[] = [];
+                const q = data.quiromancia;
+
+                if (q.lineas_principales) {
+                    newMessages.push({ role: 'assistant', content: `✋ **LÍNEAS PRINCIPALES**\n\n${q.lineas_principales}` });
+                }
+                if (q.montes_y_planetas) {
+                    newMessages.push({ role: 'assistant', content: `🌙 **MONTES Y PLANETAS**\n\n${q.montes_y_planetas}` });
+                }
+                if (q.personalidad) {
+                    newMessages.push({ role: 'assistant', content: `🧬 **PERSONALIDAD**\n\n${q.personalidad}` });
+                }
+                if (q.sexualidad) {
+                    newMessages.push({ role: 'assistant', content: `🔥 **SEXUALIDAD Y AFECTIVIDAD**\n\n${q.sexualidad}` });
+                }
+                if (data.mensaje_sabio) {
+                    newMessages.push({ role: 'assistant', content: `🪷 **SABIDURÍA DEL I CHING**\n\n${data.mensaje_sabio}` });
+                }
+
+                setMessages(newMessages);
+            } else {
+                throw new Error('Formato de respuesta inválido');
+            }
+        } catch (error: any) {
+            console.error(error);
+            setMessages([{ role: 'assistant', content: 'Las nubes oscurecen mi visión en este momento. Inténtalo de nuevo más tarde.' }]);
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
     return (
         <div className="max-w-4xl mx-auto py-10" ref={contentRef}>
             <div className="mystic-card rounded-[3rem] overflow-hidden flex flex-col h-[700px] border border-white/10 shadow-2xl relative">
@@ -433,6 +482,17 @@ export default function MaestroKongChat({ diagnosis, handImages }: MaestroKongCh
                         >
                             <BookOpen size={16} />
                             Consulta Completa
+                        </motion.button>
+
+                        <motion.button
+                            whileHover={{ scale: 1.02 }}
+                            whileTap={{ scale: 0.95 }}
+                            onClick={handleLecturaQuiromancia}
+                            disabled={isLoading}
+                            className="flex items-center justify-center gap-2 px-6 py-4 md:px-4 md:py-2 rounded-xl bg-gradient-to-r from-purple-500/20 to-pink-500/20 border border-purple-500/30 text-purple-400 hover:text-purple-300 transition-colors text-sm font-bold w-full md:w-auto disabled:opacity-50"
+                        >
+                            <BookOpen size={16} />
+                            Lectura Quiromancia
                         </motion.button>
 
                         <div className="hidden md:flex w-10 h-10 rounded-full bg-white/5 items-center justify-center text-muted-foreground hover:text-white transition-colors cursor-pointer shrink-0">
