@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-export const maxDuration = 60;
+export const maxDuration = 120;
 
 const SYSTEM_PROMPT = `Actúa como el Gran Maestro Wang Chenxia (Diagnóstico por la mano) y Ken Wilber (Visión Integral).
 Tu tarea es hacer una DISECCIÓN VISUAL de estas manos (Izquierda=Ancestral/Yin, Derecha=Actual/Yang).
@@ -61,7 +61,7 @@ function validateAndFixDiagnosis(parsed: { [key: string]: unknown }): object | n
 }
 
 export async function POST(req: NextRequest) {
-    console.log('--- Iniciando Análisis Tao (Vía Groq Turbo) ---');
+    console.log('--- Iniciando Análisis Tao (Vía OpenRouter) ---');
     try {
         const { leftHand, rightHand } = await req.json();
 
@@ -69,16 +69,19 @@ export async function POST(req: NextRequest) {
             return NextResponse.json({ error: 'Faltan las imágenes de las manos' }, { status: 400 });
         }
 
-        const groqKey = process.env.GROQ_API_KEY;
-        if (!groqKey) {
-            console.error('❌ Error: GROQ_API_KEY no encontrada en .env.local');
-            return NextResponse.json({ error: 'Llave de Groq no configurada' }, { status: 500 });
+        const openRouterKey = process.env.OPENROUTER_API_KEY;
+        if (!openRouterKey) {
+            console.error('❌ Error: OPENROUTER_API_KEY no encontrada en .env.local');
+            return NextResponse.json({ error: 'Llave de OpenRouter no configurada' }, { status: 500 });
         }
 
         const MODELS_TO_TRY = [
-            "meta-llama/llama-4-maverick-17b-128e-instruct",
-            "meta-llama/llama-4-scout-17b-16e-instruct"
+            "google/gemma-4-26b-a4b-it:free",
+            "google/gemma-4-31b-it:free",
+            "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free",
+            "nvidia/nemotron-nano-12b-v2-vl:free"
         ];
+        const API_URL = 'https://openrouter.ai/api/v1/chat/completions';
 
         let contentText = "";
         let success = false;
@@ -108,11 +111,13 @@ export async function POST(req: NextRequest) {
                 const controller = new AbortController();
                 const timeoutId = setTimeout(() => controller.abort(), 20000);
 
-                const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+                const response = await fetch(API_URL, {
                     method: 'POST',
                     headers: {
-                        'Authorization': `Bearer ${groqKey}`,
-                        'Content-Type': 'application/json'
+                        'Authorization': `Bearer ${openRouterKey}`,
+                        'Content-Type': 'application/json',
+                        'HTTP-Referer': 'https://tao-health-scanner.vercel.app',
+                        'X-Title': 'Tao Health Scanner'
                     },
                     body: JSON.stringify(payload),
                     signal: controller.signal
@@ -141,12 +146,12 @@ export async function POST(req: NextRequest) {
         }
 
         if (!success) {
-            throw new Error(`Todos los modelos de Groq fallaron o no respondieron. Último error: ${lastError}`);
+            throw new Error(`Todos los modelos de OpenRouter fallaron o no respondieron. Último error: ${lastError}`);
         }
 
         const parsed = parseJsonRobust(contentText);
         if (!parsed) {
-            console.error("❌ Groq no devolvió un JSON válido:", contentText);
+            console.error("❌ OpenRouter no devolvió un JSON válido:", contentText);
             throw new Error('Formato de diagnóstico inválido');
         }
 
