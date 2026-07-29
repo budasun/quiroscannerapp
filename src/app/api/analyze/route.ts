@@ -76,11 +76,8 @@ export async function POST(req: NextRequest) {
         }
 
         const MODELS_TO_TRY = [
-            "meta-llama/llama-4-scout-17b-16e-instruct",
             "meta-llama/llama-4-maverick-17b-128e-instruct",
-            "llama-3.2-11b-vision-preview",
-            "llama-3.2-90b-vision-preview",
-            "llava-v1.5-7b-4096-preview"
+            "meta-llama/llama-4-scout-17b-16e-instruct"
         ];
 
         let contentText = "";
