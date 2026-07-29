@@ -76,9 +76,7 @@ export async function POST(req: NextRequest) {
         }
 
         const MODELS_TO_TRY = [
-            "meta-llama/llama-4-scout-17b-16e-instruct",
-            "meta-llama/llama-4-maverick-17b-128e-instruct",
-            "qwen/qwen3-32b"
+            "qwen/qwen3.6-27b"
         ];
 
         let contentText = "";
@@ -88,22 +86,17 @@ export async function POST(req: NextRequest) {
         for (const model of MODELS_TO_TRY) {
             console.log(`📡 Intentando con ${model}...`);
             try {
-                // Qwen3 en Groq actualmente requiere contenido como string simple
-                const isQwen = model.toLowerCase().includes('qwen');
-
                 const payload = {
                     model: model,
                     messages: [
                         { role: "system", content: SYSTEM_PROMPT },
                         {
                             role: "user",
-                            content: isQwen
-                                ? `Analiza ambas manos (IZQUIERDA = Yin, DERECHA = Yang). Responde en JSON.\n\nImagen 1: ${leftHand}\n\nImagen 2: ${rightHand}`
-                                : [
-                                    { type: "text", text: "Analiza ambas manos (IZQUIERDA = energía ancestral/Yin, DERECHA = energía actual/Yang). Busca marcas físicas reales: lunares, manchas, venas, color de uñas, líneas. Responde ÚNICAMENTE con JSON válido." },
-                                    { type: "image_url", image_url: { url: leftHand } },
-                                    { type: "image_url", image_url: { url: rightHand } }
-                                ]
+                            content: [
+                                { type: "text", text: "Analiza ambas manos (IZQUIERDA = energía ancestral/Yin, DERECHA = energía actual/Yang). Busca marcas físicas reales: lunares, manchas, venas, color de uñas, líneas. Responde ÚNICAMENTE con JSON válido." },
+                                { type: "image_url", image_url: { url: leftHand } },
+                                { type: "image_url", image_url: { url: rightHand } }
+                            ]
                         }
                     ],
                     temperature: 0.5,
@@ -111,7 +104,7 @@ export async function POST(req: NextRequest) {
                 };
 
                 const controller = new AbortController();
-                const timeoutId = setTimeout(() => controller.abort(), 30000); // 30s para modelos grandes
+                const timeoutId = setTimeout(() => controller.abort(), 30000);
 
                 const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
                     method: 'POST',
