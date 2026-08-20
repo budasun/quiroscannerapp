@@ -70,7 +70,7 @@ function validateAndFixDiagnosis(parsed: { [key: string]: unknown }): object | n
 }
 
 export async function POST(req: NextRequest) {
-    console.log('--- Iniciando Análisis Tao (Vía Groq Vision) ---');
+    console.log('--- Iniciando Análisis Tao (OpenRouter Vision + Groq Fallback) ---');
     try {
         const { leftHand, rightHand, language = 'es' } = await req.json();
 
@@ -78,55 +78,117 @@ export async function POST(req: NextRequest) {
             return NextResponse.json({ error: 'Faltan las imágenes de las manos' }, { status: 400 });
         }
 
-        const groqApiKey = process.env.GROQ_API_KEY;
-        if (!groqApiKey) {
-            console.error('❌ Error: GROQ_API_KEY no encontrada en .env.local');
-            return NextResponse.json({ error: 'Llave de Groq no configurada' }, { status: 500 });
+        const openRouterKey = process.env.OPENROUTER_API_KEY;
+        const groqKey = process.env.GROQ_API_KEY;
+
+        if (!openRouterKey && !groqKey) {
+            console.error('❌ Error: Ni OPENROUTER_API_KEY ni GROQ_API_KEY configuradas');
+            return NextResponse.json({ error: 'Llaves de API no configuradas' }, { status: 500 });
         }
 
         const languageName = LANGUAGE_NAMES[language] || 'Spanish';
         const systemPromptWithLang = SYSTEM_PROMPT + LANGUAGE_RULE.replace(/{languageName}/g, languageName);
 
-        const MODELS_TO_TRY = [
-            "llama-3.2-11b-vision-preview",
-            "llama-3.2-90b-vision-preview"
-        ];
-        const API_URL = 'https://api.groq.com/openai/v1/chat/completions';
+        const visionPrompt = systemPromptWithLang + "\n\n---\n\nAnaliza ambas manos (IZQUIERDA = energía ancestral/Yin, DERECHA = energía actual/Yang). Busca marcas físicas reales: lunares, manchas, venas, color de uñas, líneas. Responde ÚNICAMENTE con JSON válido.";
 
         let contentText = "";
         let success = false;
         let lastError = "";
         let modelUsed = "";
 
-        for (const model of MODELS_TO_TRY) {
-            console.log(`📡 Intentando con ${model}...`);
-            try {
-                const payload = {
-                    model: model,
-                    messages: [
-                        {
-                            role: "user",
-                            content: [
-                                { type: "text", text: systemPromptWithLang + "\n\n---\n\nAnaliza ambas manos (IZQUIERDA = energía ancestral/Yin, DERECHA = energía actual/Yang). Busca marcas físicas reales: lunares, manchas, venas, color de uñas, líneas. Responde ÚNICAMENTE con JSON válido." },
-                                { type: "image_url", image_url: { url: leftHand } },
-                                { type: "image_url", image_url: { url: rightHand } }
-                            ]
+        // 1. PRIMERO: OpenRouter con Gemini Vision
+        if (openRouterKey) {
+            const OPENROUTER_MODELS = [
+                "google/gemini-2.5-flash",
+                "google/gemini-2.0-flash-001"
+            ];
+
+            for (const model of OPENROUTER_MODELS) {
+                console.log(`📡 Intentando OpenRouter con ${model}...`);
+                try {
+                    const payload = {
+                        model: model,
+                        messages: [
+                            {
+                                role: "user",
+                                content: [
+                                    { type: "text", text: visionPrompt },
+                                    { type: "image_url", image_url: { url: leftHand } },
+                                    { type: "image_url", image_url: { url: rightHand } }
+                                ]
+                            }
+                        ],
+                        temperature: 0.3,
+                        max_tokens: 1024
+                    };
+
+                    const controller = new AbortController();
+                    const timeoutId = setTimeout(() => controller.abort(), 20000);
+
+                    const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+                        method: 'POST',
+                        headers: {
+                            'Authorization': `Bearer ${openRouterKey}`,
+                            'Content-Type': 'application/json',
+                            'HTTP-Referer': 'https://tao-health-scanner.vercel.app',
+                            'X-Title': 'Tao Health Scanner'
+                        },
+                        body: JSON.stringify(payload),
+                        signal: controller.signal
+                    });
+
+                    clearTimeout(timeoutId);
+
+                    if (response.ok) {
+                        const data = await response.json() as any;
+                        contentText = data.choices?.[0]?.message?.content;
+                        if (contentText) {
+                            modelUsed = `OpenRouter/${model}`;
+                            console.log(`✅ Éxito con ${model}`);
+                            success = true;
+                            break;
                         }
-                    ],
-                    temperature: 0.3,
-                    max_tokens: 1024
-                };
+                    } else {
+                        const errDetail = await response.text();
+                        lastError = `Status ${response.status}: ${errDetail}`;
+                        console.warn(`⚠️ ${model} falló en OpenRouter: ${lastError}`);
+                    }
+                } catch (err: any) {
+                    lastError = err.message;
+                    console.warn(`⚠️ Error de red/timeout con ${model}: ${lastError}`);
+                }
+            }
+        }
 
+        // 2. RESPALDO: Groq con qwen/qwen3.6-27b (vision + JSON mode)
+        if (!success && groqKey) {
+            console.log('🔄 Intentando respaldo con Groq (qwen/qwen3.6-27b)...');
+            try {
                 const controller = new AbortController();
-                const timeoutId = setTimeout(() => controller.abort(), 20000);
+                const timeoutId = setTimeout(() => controller.abort(), 30000);
 
-                const response = await fetch(API_URL, {
+                const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
                     method: 'POST',
                     headers: {
-                        'Authorization': `Bearer ${groqApiKey}`,
-                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${groqKey}`,
+                        'Content-Type': 'application/json'
                     },
-                    body: JSON.stringify(payload),
+                    body: JSON.stringify({
+                        model: "qwen/qwen3.6-27b",
+                        messages: [
+                            {
+                                role: "user",
+                                content: [
+                                    { type: "text", text: visionPrompt },
+                                    { type: "image_url", image_url: { url: leftHand } },
+                                    { type: "image_url", image_url: { url: rightHand } }
+                                ]
+                            }
+                        ],
+                        temperature: 0.3,
+                        max_tokens: 1024,
+                        response_format: { type: "json_object" }
+                    }),
                     signal: controller.signal
                 });
 
@@ -136,29 +198,28 @@ export async function POST(req: NextRequest) {
                     const data = await response.json() as any;
                     contentText = data.choices?.[0]?.message?.content;
                     if (contentText) {
-                        modelUsed = model;
-                        console.log(`✅ Éxito con ${model}`);
+                        modelUsed = "Groq/qwen/qwen3.6-27b";
                         success = true;
-                        break;
+                        console.log('✅ Éxito con Groq (qwen/qwen3.6-27b)');
                     }
                 } else {
                     const errDetail = await response.text();
-                    lastError = `Status ${response.status}: ${errDetail}`;
-                    console.warn(`⚠️ ${model} falló en Groq: ${lastError}`);
+                    lastError = `Groq Status ${response.status}: ${errDetail}`;
+                    console.warn(`⚠️ Groq falló: ${lastError}`);
                 }
             } catch (err: any) {
-                lastError = err.message;
-                console.warn(`⚠️ Error de red/timeout con ${model}: ${lastError}`);
+                lastError = `Groq Error: ${err.message}`;
+                console.warn(`⚠️ Error de red/timeout con Groq: ${lastError}`);
             }
         }
 
         if (!success) {
-            throw new Error(`Los modelos de Groq fallaron o no respondieron. Último error: ${lastError}`);
+            throw new Error(`Todos los modelos fallaron. Último error: ${lastError}`);
         }
 
         const parsed = parseJsonRobust(contentText);
         if (!parsed) {
-            console.error("❌ Groq no devolvió un JSON válido:", contentText);
+            console.error("❌ OpenRouter no devolvió un JSON válido:", contentText);
             throw new Error('Formato de diagnóstico inválido');
         }
 
@@ -169,7 +230,7 @@ export async function POST(req: NextRequest) {
 
         console.log('✅ ¡Diagnóstico devuelto a la velocidad de la luz!');
         return NextResponse.json({
-            modelo_utilizado: `Lectura hecha con ${modelUsed}`,
+            modelo_utilizado: modelUsed,
             ...(validated as object)
         });
 

@@ -135,7 +135,7 @@ export async function POST(req: NextRequest) {
         if (groqKey) {
             console.log('🔄 [Quiromancia] Intentando respaldo con Groq...');
             try {
-                const content = await callAPI('llama-3.3-70b-versatile', groqKey, 'https://api.groq.com/openai/v1', {});
+                const content = await callAPI('qwen/qwen3.6-27b', groqKey, 'https://api.groq.com/openai/v1', {});
                 if (content) {
                     const parsed = parseJsonRobust(content);
                     if (parsed) {

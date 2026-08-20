@@ -153,7 +153,7 @@ export async function POST(req: NextRequest) {
                         'Content-Type': 'application/json'
                     },
                     body: JSON.stringify({
-                        model: "llama-3.3-70b-versatile",
+                        model: "qwen/qwen3.6-27b",
                         messages: [
                             { role: "system", content: promptTemplate },
                             { role: "user", content: "Genera la consulta completa basada en mi diagnóstico de manos. Devuelve solo JSON válido." }
