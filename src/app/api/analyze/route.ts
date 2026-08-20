@@ -31,6 +31,9 @@ FORMATO JSON OBLIGATORIO (Responde SOLO esto, sin texto antes ni después, respe
 
 function cleanJsonResponse(content: string): string {
     let cleaned = content.trim();
+    // Strip think tags
+    cleaned = cleaned.replace(/<think>[\s\S]*?<\/think>/g, '').trim();
+    // Strip markdown fences
     if (cleaned.startsWith('```json')) cleaned = cleaned.replace(/^```json/, '').replace(/```$/, '');
     else if (cleaned.startsWith('```')) cleaned = cleaned.replace(/^```/, '').replace(/```$/, '');
     const jsonMatch = cleaned.match(/\{[\s\S]*\}/);
@@ -95,6 +98,10 @@ export async function POST(req: NextRequest) {
                     model: "qwen/qwen3.6-27b",
                     messages: [
                         {
+                            role: "system",
+                            content: "IMPORTANT: Do NOT use <think> tags. Respond ONLY with valid JSON. No explanation, no thinking, no markdown. Just the raw JSON object."
+                        },
+                        {
                             role: "user",
                             content: [
                                 { type: "text", text: visionPrompt },
@@ -104,7 +111,7 @@ export async function POST(req: NextRequest) {
                         }
                     ],
                     temperature: 0.3,
-                    max_tokens: 1024
+                    max_tokens: 16384
                 }),
                 signal: controller.signal
             });
