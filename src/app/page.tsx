@@ -8,12 +8,16 @@ import MaestroKongChat from '@/components/MaestroKongChat';
 import { DiagnosisResult } from '@/types';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Sparkles, MessageSquare, RefreshCw, Eye, Brain, Heart, ChevronDown } from 'lucide-react';
+import { Language, translations } from '@/lib/translations';
 
 export default function TaoHealthScanner() {
   const [diagnosis, setDiagnosis] = useState<DiagnosisResult | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [view, setView] = useState<'scan' | 'result'>('scan');
   const [handImages, setHandImages] = useState<{ left: string; right: string } | null>(null);
+  const [language, setLanguage] = useState<Language>('es');
+
+  const t = translations[language];
 
   // Persistencia de Estado
   useEffect(() => {
@@ -107,10 +111,10 @@ export default function TaoHealthScanner() {
 
         <div className="flex items-center gap-6">
           <div className="hidden md:flex gap-6 text-sm font-medium text-muted-foreground">
-            <Link href="/metodo" className="hover:text-white transition-colors">Tradicíon</Link>
-            <Link href="/metodo" className="hover:text-white transition-colors">Método</Link>
-            <Link href="/metodo" className="hover:text-white transition-colors">IA</Link>
-            <Link href="/desarrollador" className="hover:text-white transition-colors">Desarrollador</Link>
+            <Link href="/metodo" className="hover:text-white transition-colors">{t.tradition}</Link>
+            <Link href="/metodo" className="hover:text-white transition-colors">{t.method}</Link>
+            <Link href="/metodo" className="hover:text-white transition-colors">{t.ia}</Link>
+            <Link href="/desarrollador" className="hover:text-white transition-colors">{t.developer}</Link>
           </div>
           {diagnosis && (
             <button
@@ -118,7 +122,7 @@ export default function TaoHealthScanner() {
               className="bg-white/5 border border-white/10 px-4 py-2 rounded-xl text-sm font-bold flex items-center gap-2 hover:bg-white/10 transition-all"
             >
               {view === 'scan' ? <Eye size={16} /> : <RefreshCw size={16} />}
-              {view === 'scan' ? 'Ver Resultado' : 'Nueva Consulta'}
+              {view === 'scan' ? t.viewResult : t.newConsult}
             </button>
           )}
         </div>
@@ -143,7 +147,7 @@ export default function TaoHealthScanner() {
                   className="inline-flex items-center gap-2 px-4 py-1 rounded-full bg-primary/10 border border-primary/20 text-primary text-xs font-bold uppercase tracking-widest mb-4"
                 >
                   <Sparkles size={12} />
-                  Tecnología Ancestral x IA
+                  {t.heroTag}
                 </motion.div>
 
                 <motion.h2
@@ -152,7 +156,7 @@ export default function TaoHealthScanner() {
                   transition={{ delay: 0.3 }}
                   className="text-5xl md:text-8xl font-black tracking-tighter leading-tight"
                 >
-                  Tu salud en la <span className="gold-text">palma</span> de tu mano.
+                  {t.heroTitle1}<span className="gold-text">{t.heroTitleHighlight}</span>{t.heroTitle2}
                 </motion.h2>
 
                 <motion.p
@@ -161,7 +165,7 @@ export default function TaoHealthScanner() {
                   transition={{ delay: 0.4 }}
                   className="text-lg md:text-xl text-muted-foreground max-w-3xl mx-auto font-light leading-relaxed"
                 >
-                  Fusionamos la sabiduría de <span className="text-white font-medium">Wang Chenxia</span> y la <span className="text-white font-medium">Psicología Integral</span> para realizar un análisis holográfico de tu bienestar físico y ancestral.
+                  {t.heroDesc}<span className="text-white font-medium">{t.heroDescBold1}</span>{t.heroDescMiddle}<span className="text-white font-medium">{t.heroDescBold2}</span>{t.heroDescEnd}
                 </motion.p>
 
                 <motion.div
@@ -175,14 +179,14 @@ export default function TaoHealthScanner() {
               </div>
 
               {/* Scanner Component */}
-              <HandScanner onAnalyze={handleAnalyze} isLoading={isLoading} />
+              <HandScanner onAnalyze={handleAnalyze} isLoading={isLoading} language={language} setLanguage={setLanguage} />
 
               {/* Features Section */}
               <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mt-40">
                 {[
-                  { icon: Eye, title: "Análisis Visual", desc: "Detección de marcas celulares, coloración y líneas orgánicas." },
-                  { icon: Brain, title: "Visión Integral", desc: "Mapeo de los 4 cuadrantes del ser: Yo, Ello, Nosotros, Ellos." },
-                  { icon: Heart, title: "Salud Tao", desc: "Balance de los 5 elementos fundamentales en tu sistema." }
+                  { icon: Eye, title: t.feature1Title, desc: t.feature1Desc },
+                  { icon: Brain, title: t.feature2Title, desc: t.feature2Desc },
+                  { icon: Heart, title: t.feature3Title, desc: t.feature3Desc }
                 ].map((f, i) => (
                   <motion.div
                     key={i}
@@ -207,11 +211,11 @@ export default function TaoHealthScanner() {
               className="py-12 pb-32 space-y-24"
             >
               <div className="text-center pt-8">
-                <span className="text-primary font-bold tracking-[0.3em] uppercase text-[10px] mb-4 block">Diagnóstico Finalizado</span>
+                <span className="text-primary font-bold tracking-[0.3em] uppercase text-[10px] mb-4 block">{t.diagnosisFinished}</span>
                 {diagnosis?.modelo_utilizado && (
                   <p className="text-xs text-muted-foreground/60 font-mono mb-4">{diagnosis.modelo_utilizado}</p>
                 )}
-                <h2 className="text-4xl md:text-6xl font-black text-white">Tu Mapa Energético</h2>
+                <h2 className="text-4xl md:text-6xl font-black text-white">{t.yourEnergyMap}</h2>
               </div>
 
               {diagnosis && <DiagnosisView result={diagnosis} handImages={handImages} />}
@@ -222,12 +226,12 @@ export default function TaoHealthScanner() {
                   <div className="inline-block p-4 rounded-full bg-white/5 border border-white/10 mb-4">
                     <MessageSquare className="text-primary" size={32} />
                   </div>
-                  <h3 className="text-4xl font-black gold-text italic">Conversa con el Maestro Kong</h3>
+                  <h3 className="text-4xl font-black gold-text italic">{t.chatTitle}</h3>
                   <p className="text-muted-foreground max-w-xl mx-auto font-light">
-                    Consulta al sabio sobre los desequilibrios encontrados y recibe guía espiritual.
+                    {t.chatDesc}
                   </p>
                 </div>
-                {diagnosis && <MaestroKongChat diagnosis={diagnosis} handImages={handImages} />}
+                {diagnosis && <MaestroKongChat diagnosis={diagnosis} handImages={handImages} language={language} />}
               </div>
 
               <div className="flex justify-center pt-10">
@@ -236,7 +240,7 @@ export default function TaoHealthScanner() {
                   className="flex items-center gap-3 bg-white/5 hover:bg-white/10 text-white border border-white/10 px-8 py-4 rounded-2xl transition-all font-bold group"
                 >
                   <RefreshCw size={20} className="group-hover:rotate-180 transition-transform duration-700" />
-                  Realizar Nuevo Análisis
+                  {t.newAnalysis}
                 </button>
               </div>
             </motion.div>
@@ -253,7 +257,7 @@ export default function TaoHealthScanner() {
             <span className="font-bold tracking-tighter text-white">TAO HEALTH SCANNER</span>
           </div>
           <p className="text-xs text-muted-foreground font-light opacity-50">
-            © 2026 • Diseñado para la sanación profunda y el despertar de la consciencia.
+            {t.footerCopy}
           </p>
           <div className="flex gap-6 text-[10px] uppercase tracking-widest text-muted-foreground font-bold">
             <Link href="/desarrollador" className="hover:text-primary transition-colors">Desarrollador</Link>

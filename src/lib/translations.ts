@@ -1,0 +1,322 @@
+export type Language = 'es' | 'en' | 'fr';
+
+export const translations: Record<Language, Record<string, string>> = {
+    es: {
+        // HandScanner
+        leftHandTitle: 'Mano Izquierda',
+        leftHandBadge: 'Ancestros • Pasado',
+        leftHandCapture: 'Captura tu pasado',
+        leftHandUpload: 'Sube la foto de tu palma izquierda',
+        rightHandTitle: 'Mano Derecha',
+        rightHandBadge: 'Acción • Presente',
+        rightHandCapture: 'Define tu presente',
+        rightHandUpload: 'Sube la foto de tu palma derecha',
+        startDiagnosis: 'Iniciar Diagnóstico',
+        loadingDiagnosis: 'Diseccionando el Tao...',
+        uploadBoth: 'Sube ambas palmas para que la IA pueda contrastar tu energía',
+        imageError: 'Hubo un error al procesar la imagen. Intenta con otra.',
+
+        // Page - Nav
+        tradition: 'Tradicíon',
+        method: 'Método',
+        ia: 'IA',
+        developer: 'Desarrollador',
+        viewResult: 'Ver Resultado',
+        newConsult: 'Nueva Consulta',
+
+        // Page - Hero
+        heroTag: 'Tecnología Ancestral x IA',
+        heroTitle1: 'Tu salud en la ',
+        heroTitleHighlight: 'palma',
+        heroTitle2: ' de tu mano.',
+        heroDesc: 'Fusionamos la sabiduría de ',
+        heroDescBold1: 'Wang Chenxia',
+        heroDescMiddle: ' y la ',
+        heroDescBold2: 'Psicología Integral',
+        heroDescEnd: ' para realizar un análisis holográfico de tu bienestar físico y ancestral.',
+
+        // Page - Features
+        feature1Title: 'Análisis Visual',
+        feature1Desc: 'Detección de marcas celulares, coloración y líneas orgánicas.',
+        feature2Title: 'Visión Integral',
+        feature2Desc: 'Mapeo de los 4 cuadrantes del ser: Yo, Ello, Nosotros, Ellos.',
+        feature3Title: 'Salud Tao',
+        feature3Desc: 'Balance de los 5 elementos fundamentales en tu sistema.',
+
+        // Page - Result
+        diagnosisFinished: 'Diagnóstico Finalizado',
+        yourEnergyMap: 'Tu Mapa Energético',
+        chatTitle: 'Conversa con el Maestro Kong',
+        chatDesc: 'Consulta al sabio sobre los desequilibrios encontrados y recibe guía espiritual.',
+        newAnalysis: 'Realizar Nuevo Análisis',
+
+        // Page - Footer
+        footerCopy: '© 2026 • Diseñado para la sanación profunda y el despertar de la consciencia.',
+
+        // MaestroKongChat
+        guideLabel: 'Guía Taoísta Integral',
+        downloadPDF: 'Descargar PDF',
+        consultaCompleta: 'Consulta Completa',
+        lecturaQuiromancia: 'Lectura Quiromancia',
+        emptyQuote: '"El río fluye sin esfuerzo..."',
+        emptyHint: 'Pregunta sobre las marcas en tu mano o pide un consejo para equilibrar tu ',
+        inputPlaceholder: 'Pregunta al sabio sobre tu diagnóstico...',
+        userLabel: 'Tú',
+        loadingDots: 'El sabio medita...',
+        errorResponse: 'Las nubes oscurecen mi visión en este momento. Inténtalo de nuevo más tarde.',
+        expandTitle: 'Expandir',
+        collapseTitle: 'Reducir',
+        metodoLink: 'El Método',
+        privacidadLink: 'Privacidad',
+        terminosLink: 'Términos',
+
+        // PDF
+        pdfTitle: 'TAO HEALTH SCANNER PRO',
+        pdfSubtitle: 'Diagnóstico Integral',
+        pdfHandLeft: '🖐 Izquierda (Yin · Ancestral)',
+        pdfHandRight: '✋ Derecha (Yang · Actual)',
+        pdfUserLabel: 'Tú:',
+        pdfAssistantLabel: 'Maestro Kong:',
+        pdfFooter: 'Tao Health Scanner Pro',
+        pdfPage: 'Pág.',
+
+        // Consulta Completa sections
+        sectionYO: '🏯 **YO - Mente y Espiritu**',
+        sectionELLO: '🌿 **ELLO - Cuerpo Físico**',
+        sectionNOSOTROS: '🪷 **NOSOTROS - Ancestros y Linaje**',
+        sectionELLOS: '🌍 **ELLOS - Entorno y Sociedad**',
+        sectionPronostico: '⚖️ **PRONÓSTICO DE EVOLUCIÓN**',
+        pronosticoCamino: '**Camino de la enfermedad:**',
+        pronosticoConsecuencias: '**Consecuencias crónicas:**',
+        sectionReceta: '☯️ **RECETA CLÍNICA TAOÍSTA**',
+        recetaAcupuntura: '📍 **Acupuntura / Digitopuntura:**',
+        recetaHerbolaria: '🍵 **Herbolaria Integral:**',
+        recetaDietetica: '🥣 **Dietética:**',
+        sectionHabitos: '✨ **HÁBITOS DE SANACIÓN**',
+        habitosFisicos: '🏃 **Físicos:**',
+        habitosMentales: '🧠 **Mentales:**',
+        habitosEspirituales: '✨ **Espirituales:**',
+        habitosSueno: '🌙 **Higiene del Sueño (MTC):**',
+        sectionDespertar: '👁️ **DESPERTAR DE CONSCIENCIA**',
+        despertarNote: '*Por favor, respóndeme aquí abajo para ajustar tu receta y recomendaciones.*',
+
+        // Quiromancia sections
+        sectionLineas: '✋ **LÍNEAS PRINCIPALES**',
+        sectionMontes: '🌙 **MONTES Y PLANETAS**',
+        sectionPersonalidad: '🧬 **PERSONALIDAD**',
+        sectionSexualidad: '🔥 **SEXUALIDAD Y AFECTIVIDAD**',
+        sectionSabiduria: '🪷 **SABIDURÍA DEL I CHING**',
+    },
+    en: {
+        // HandScanner
+        leftHandTitle: 'Left Hand',
+        leftHandBadge: 'Ancestors • Past',
+        leftHandCapture: 'Capture your past',
+        leftHandUpload: 'Upload a photo of your left palm',
+        rightHandTitle: 'Right Hand',
+        rightHandBadge: 'Action • Present',
+        rightHandCapture: 'Define your present',
+        rightHandUpload: 'Upload a photo of your right palm',
+        startDiagnosis: 'Start Diagnosis',
+        loadingDiagnosis: 'Dissecting the Tao...',
+        uploadBoth: 'Upload both palms so the AI can contrast your energy',
+        imageError: 'There was an error processing the image. Try another one.',
+
+        // Page - Nav
+        tradition: 'Tradition',
+        method: 'Method',
+        ia: 'AI',
+        developer: 'Developer',
+        viewResult: 'View Result',
+        newConsult: 'New Consult',
+
+        // Page - Hero
+        heroTag: 'Ancestral Technology x AI',
+        heroTitle1: 'Your health in the ',
+        heroTitleHighlight: 'palm',
+        heroTitle2: ' of your hand.',
+        heroDesc: 'We fuse the wisdom of ',
+        heroDescBold1: 'Wang Chenxia',
+        heroDescMiddle: ' and ',
+        heroDescBold2: 'Integral Psychology',
+        heroDescEnd: ' to perform a holographic analysis of your physical and ancestral well-being.',
+
+        // Page - Features
+        feature1Title: 'Visual Analysis',
+        feature1Desc: 'Detection of cellular marks, coloration and organic lines.',
+        feature2Title: 'Integral Vision',
+        feature2Desc: 'Mapping of the 4 quadrants of being: Self, Body, Ancestors, Society.',
+        feature3Title: 'Tao Health',
+        feature3Desc: 'Balance of the 5 fundamental elements in your system.',
+
+        // Page - Result
+        diagnosisFinished: 'Diagnosis Complete',
+        yourEnergyMap: 'Your Energy Map',
+        chatTitle: 'Talk with Master Kong',
+        chatDesc: 'Ask the sage about the imbalances found and receive spiritual guidance.',
+        newAnalysis: 'Start New Analysis',
+
+        // Page - Footer
+        footerCopy: '© 2026 • Designed for deep healing and consciousness awakening.',
+
+        // MaestroKongChat
+        guideLabel: 'Integral Taoist Guide',
+        downloadPDF: 'Download PDF',
+        consultaCompleta: 'Full Consultation',
+        lecturaQuiromancia: 'Palmistry Reading',
+        emptyQuote: '"The river flows without effort..."',
+        emptyHint: 'Ask about the marks on your hand or seek advice to balance your ',
+        inputPlaceholder: 'Ask the sage about your diagnosis...',
+        userLabel: 'You',
+        loadingDots: 'The sage meditates...',
+        errorResponse: 'Dark clouds obscure my vision at this moment. Try again later.',
+        expandTitle: 'Expand',
+        collapseTitle: 'Collapse',
+        metodoLink: 'The Method',
+        privacidadLink: 'Privacy',
+        terminosLink: 'Terms',
+
+        // PDF
+        pdfTitle: 'TAO HEALTH SCANNER PRO',
+        pdfSubtitle: 'Integral Diagnosis',
+        pdfHandLeft: '🖐 Left (Yin · Ancestral)',
+        pdfHandRight: '✋ Right (Yang · Current)',
+        pdfUserLabel: 'You:',
+        pdfAssistantLabel: 'Master Kong:',
+        pdfFooter: 'Tao Health Scanner Pro',
+        pdfPage: 'Pg.',
+
+        // Consulta Completa sections
+        sectionYO: '🏯 **YO - Mind and Spirit**',
+        sectionELLO: '🌿 **ELLO - Physical Body**',
+        sectionNOSOTROS: '🪷 **NOSOTROS - Ancestors and Lineage**',
+        sectionELLOS: '🌍 **ELLOS - Environment and Society**',
+        sectionPronostico: '⚖️ **EVOLUTION PROGNOSIS**',
+        pronosticoCamino: '**Path of illness:**',
+        pronosticoConsecuencias: '**Chronic consequences:**',
+        sectionReceta: '☯️ **TAOIST CLINICAL PRESCRIPTION**',
+        recetaAcupuntura: '📍 **Acupuncture / Acupressure:**',
+        recetaHerbolaria: '🍵 **Integral Herbalism:**',
+        recetaDietetica: '🥣 **Dietetics:**',
+        sectionHabitos: '✨ **HEALING HABITS**',
+        habitosFisicos: '🏃 **Physical:**',
+        habitosMentales: '🧠 **Mental:**',
+        habitosEspirituales: '✨ **Spiritual:**',
+        habitosSueno: '🌙 **Sleep Hygiene (TCM):**',
+        sectionDespertar: '👁️ **AWAKENING OF CONSCIOUSNESS**',
+        despertarNote: '*Please answer below to adjust your prescription and recommendations.*',
+
+        // Quiromancia sections
+        sectionLineas: '✋ **MAIN LINES**',
+        sectionMontes: '🌙 **MOUNTS AND PLANETS**',
+        sectionPersonalidad: '🧬 **PERSONALITY**',
+        sectionSexualidad: '🔥 **SEXUALITY AND AFFECTIVITY**',
+        sectionSabiduria: '🪷 **WISDOM OF THE I CHING**',
+    },
+    fr: {
+        // HandScanner
+        leftHandTitle: 'Main Gauche',
+        leftHandBadge: 'Ancêtres • Passé',
+        leftHandCapture: 'Capturez votre passé',
+        leftHandUpload: 'Téléchargez une photo de votre paume gauche',
+        rightHandTitle: 'Main Droite',
+        rightHandBadge: 'Action • Présent',
+        rightHandCapture: 'Définissez votre présent',
+        rightHandUpload: 'Téléchargez une photo de votre paume droite',
+        startDiagnosis: 'Lancer le Diagnostic',
+        loadingDiagnosis: 'Disséquer le Tao...',
+        uploadBoth: 'Téléchargez les deux paumes pour que l\'IA puisse contraster votre énergie',
+        imageError: 'Une erreur s\'est produite lors du traitement de l\'image. Essayez une autre.',
+
+        // Page - Nav
+        tradition: 'Tradition',
+        method: 'Méthode',
+        ia: 'IA',
+        developer: 'Développeur',
+        viewResult: 'Voir le Résultat',
+        newConsult: 'Nouvelle Consultation',
+
+        // Page - Hero
+        heroTag: 'Technologie Ancestrale x IA',
+        heroTitle1: 'Votre santé dans la ',
+        heroTitleHighlight: 'paume',
+        heroTitle2: ' de votre main.',
+        heroDesc: 'Nous fusionnons la sagesse de ',
+        heroDescBold1: 'Wang Chenxia',
+        heroDescMiddle: ' et la ',
+        heroDescBold2: 'Psychologie Intégrale',
+        heroDescEnd: ' pour réaliser une analyse holographique de votre bien-être physique et ancestral.',
+
+        // Page - Features
+        feature1Title: 'Analyse Visuelle',
+        feature1Desc: 'Détection des marques cellulaires, coloration et lignes organiques.',
+        feature2Title: 'Vision Intégrale',
+        feature2Desc: 'Cartographie des 4 quadrants de l\'être : Moi, Corps, Ancêtres, Société.',
+        feature3Title: 'Santé Tao',
+        feature3Desc: 'Équilibre des 5 éléments fondamentaux dans votre système.',
+
+        // Page - Result
+        diagnosisFinished: 'Diagnostic Terminé',
+        yourEnergyMap: 'Votre Carte Énergétique',
+        chatTitle: 'Conversation avec le Maître Kong',
+        chatDesc: 'Consultez le sage sur les déséquilibres trouvés et recevez des conseils spirituels.',
+        newAnalysis: 'Nouvelle Analyse',
+
+        // Page - Footer
+        footerCopy: '© 2026 • Conçu pour la guérison profonde et l\'éveil de la conscience.',
+
+        // MaestroKongChat
+        guideLabel: 'Guide Taoïste Intégral',
+        downloadPDF: 'Télécharger PDF',
+        consultaCompleta: 'Consultation Complète',
+        lecturaQuiromancia: 'Lecture de Chiromancie',
+        emptyQuote: '"La rivière coule sans effort..."',
+        emptyHint: 'Questionnez à propos des marques sur votre main ou demandez un conseil pour équilibrer votre ',
+        inputPlaceholder: 'Questionnez le sage sur votre diagnostic...',
+        userLabel: 'Vous',
+        loadingDots: 'Le sage médite...',
+        errorResponse: 'De sombres nuages obscurcissent ma vision pour l\'instant. Réessayez plus tard.',
+        expandTitle: 'Agrandir',
+        collapseTitle: 'Réduire',
+        metodoLink: 'La Méthode',
+        privacidadLink: 'Confidentialité',
+        terminosLink: 'Conditions',
+
+        // PDF
+        pdfTitle: 'TAO HEALTH SCANNER PRO',
+        pdfSubtitle: 'Diagnostic Intégral',
+        pdfHandLeft: '🖐 Gauche (Yin · Ancestral)',
+        pdfHandRight: '✋ Droite (Yang · Actuelle)',
+        pdfUserLabel: 'Vous :',
+        pdfAssistantLabel: 'Maître Kong :',
+        pdfFooter: 'Tao Health Scanner Pro',
+        pdfPage: 'Pg.',
+
+        // Consulta Completa sections
+        sectionYO: '🏯 **MOI - Esprit et Âme**',
+        sectionELLO: '🌿 **ELLO - Corps Physique**',
+        sectionNOSOTROS: '🪷 **NOSOTROS - Ancêtres et Lignée**',
+        sectionELLOS: '🌍 **ELLOS - Environnement et Société**',
+        sectionPronostico: '⚖️ **PRONOSTIC D\'ÉVOLUTION**',
+        pronosticoCamino: '**Chemin de la maladie :**',
+        pronosticoConsecuencias: '**Conséquences chroniques :**',
+        sectionReceta: '☯️ **PRESCRIPTION CLINIQUE TAOÏSTE**',
+        recetaAcupuntura: '📍 **Acupuncture / Digitopuncture :**',
+        recetaHerbolaria: '🍵 **Herboristerie Intégrale :**',
+        recetaDietetica: '🥣 **Diététique :**',
+        sectionHabitos: '✨ **HABITUDES DE GUÉRISON**',
+        habitosFisicos: '🏃 **Physiques :**',
+        habitosMentales: '🧠 **Mentales :**',
+        habitosEspirituales: '✨ **Spirituelles :**',
+        habitosSueno: '🌙 **Hygiène du Sommeil (MTC) :**',
+        sectionDespertar: '👁️ **ÉVEIL DE CONSCIENCE**',
+        despertarNote: '*Veuillez répondre ci-dessous pour ajuster votre prescription et recommandations.*',
+
+        // Quiromancia sections
+        sectionLineas: '✋ **LIGNES PRINCIPALES**',
+        sectionMontes: '🌙 **MONTES ET PLANÈTES**',
+        sectionPersonalidad: '🧬 **PERSONNALITÉ**',
+        sectionSexualidad: '🔥 **SEXUALITÉ ET AFFECTIVITÉ**',
+        sectionSabiduria: '🪷 **SAGESSE DU YI JING**',
+    }
+};

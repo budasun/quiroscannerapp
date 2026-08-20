@@ -5,12 +5,14 @@ import Link from 'next/link';
 import { Send, MessageSquare, Sparkles, Scroll, BookOpen, Download, Loader2, ShieldCheck, Scale, Maximize, Minimize } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ChatMessage, DiagnosisResult } from '@/types';
+import { Language, translations } from '@/lib/translations';
 import html2canvas from 'html2canvas-pro';
 import jsPDF from 'jspdf';
 
 interface MaestroKongChatProps {
     diagnosis: DiagnosisResult;
     handImages?: { left: string; right: string } | null;
+    language: Language;
 }
 
 function parseMarkdown(text: string): React.ReactNode {
@@ -26,7 +28,7 @@ function parseMarkdown(text: string): React.ReactNode {
     });
 }
 
-export default function MaestroKongChat({ diagnosis, handImages }: MaestroKongChatProps) {
+export default function MaestroKongChat({ diagnosis, handImages, language }: MaestroKongChatProps) {
     const [messages, setMessages] = useState<ChatMessage[]>([]);
     const [input, setInput] = useState('');
     const [isLoading, setIsLoading] = useState(false);
@@ -37,7 +39,10 @@ export default function MaestroKongChat({ diagnosis, handImages }: MaestroKongCh
     const contentRef = useRef<HTMLDivElement>(null);
     const lastMessageRef = useRef<HTMLDivElement>(null);
 
-    // Scroll Inteligente
+    const t = translations[language];
+
+    const localeMap = { es: 'es-ES', en: 'en-US', fr: 'fr-FR' } as const;
+
     useEffect(() => {
         if (lastMessageRef.current && messages.length > 0) {
             const lastMsg = messages[messages.length - 1];
@@ -56,7 +61,6 @@ export default function MaestroKongChat({ diagnosis, handImages }: MaestroKongCh
             await new Promise(resolve => setTimeout(resolve, 800));
             const isMobile = window.innerWidth < 768;
 
-            // ── Contenedor maestro off-screen ──
             tempExportElement = document.createElement('div');
             tempExportElement.style.width = isMobile ? '700px' : '900px';
             tempExportElement.style.backgroundColor = '#050510';
@@ -69,17 +73,19 @@ export default function MaestroKongChat({ diagnosis, handImages }: MaestroKongCh
 
             const blocksToCapture: HTMLElement[] = [];
 
-            // ── BLOQUE 1: Cabecera y Fotos ──
             const headerBlock = document.createElement('div');
             headerBlock.style.padding = '40px 40px 10px 40px';
             headerBlock.style.backgroundColor = '#050510';
+
+            const locale = localeMap[language];
+            const dateStr = new Date().toLocaleDateString(locale, { day: '2-digit', month: 'long', year: 'numeric' });
 
             const titleEl = document.createElement('div');
             titleEl.style.textAlign = 'center';
             titleEl.style.marginBottom = '30px';
             titleEl.innerHTML = `
-                <h1 style="color:#8b5cf6;font-size:28px;font-weight:900;margin:0;letter-spacing:2px;">TAO HEALTH SCANNER PRO</h1>
-                <p style="color:#9ca3af;font-size:14px;margin:8px 0 0;">Diagnóstico Integral · ${new Date().toLocaleDateString('es-ES', { day: '2-digit', month: 'long', year: 'numeric' })}</p>
+                <h1 style="color:#8b5cf6;font-size:28px;font-weight:900;margin:0;letter-spacing:2px;">${t.pdfTitle}</h1>
+                <p style="color:#9ca3af;font-size:14px;margin:8px 0 0;">${t.pdfSubtitle} · ${dateStr}</p>
                 <hr style="border:none;border-top:1px solid rgba(139,92,246,0.3);margin:24px 0;">
             `;
             headerBlock.appendChild(titleEl);
@@ -124,8 +130,8 @@ export default function MaestroKongChat({ diagnosis, handImages }: MaestroKongCh
                     return wrap;
                 };
 
-                imagesContainer.appendChild(makeImgWrapper(handImages.left, '🖐 Izquierda (Yin · Ancestral)'));
-                imagesContainer.appendChild(makeImgWrapper(handImages.right, '✋ Derecha (Yang · Actual)'));
+                imagesContainer.appendChild(makeImgWrapper(handImages.left, t.pdfHandLeft));
+                imagesContainer.appendChild(makeImgWrapper(handImages.right, t.pdfHandRight));
                 headerBlock.appendChild(imagesContainer);
             }
             if (tempExportElement) {
@@ -133,7 +139,6 @@ export default function MaestroKongChat({ diagnosis, handImages }: MaestroKongCh
             }
             blocksToCapture.push(headerBlock);
 
-            // ── BLOQUE 2: Mensajes del Chat ──
             messages.forEach(m => {
                 const msgBlock = document.createElement('div');
                 msgBlock.style.padding = '10px 40px';
@@ -146,7 +151,7 @@ export default function MaestroKongChat({ diagnosis, handImages }: MaestroKongCh
                 msgBubble.style.fontSize = '16px';
                 msgBubble.style.whiteSpace = 'pre-wrap';
 
-                let formattedText = m.content
+                const formattedText = m.content
                     .replace(/\*\*(.*?)\*\*/g, '<strong style="color: #fbbf24;">$1</strong>')
                     .replace(/\*(.*?)\*/g, '<em>$1</em>');
 
@@ -155,14 +160,14 @@ export default function MaestroKongChat({ diagnosis, handImages }: MaestroKongCh
                     msgBubble.style.color = '#ffffff';
                     msgBubble.style.marginLeft = 'auto';
                     msgBubble.style.maxWidth = '80%';
-                    msgBubble.innerHTML = `<strong>Tú:</strong><br><br>${formattedText}`;
+                    msgBubble.innerHTML = `<strong>${t.pdfUserLabel}</strong><br><br>${formattedText}`;
                 } else {
                     msgBubble.style.backgroundColor = 'rgba(255, 255, 255, 0.05)';
                     msgBubble.style.border = '1px solid rgba(255, 255, 255, 0.1)';
                     msgBubble.style.color = '#e5e7eb';
                     msgBubble.style.marginRight = 'auto';
                     msgBubble.style.maxWidth = '95%';
-                    msgBubble.innerHTML = `<strong style="color: #8b5cf6; font-size: 18px;">Maestro Kong:</strong><br><br>${formattedText}`;
+                    msgBubble.innerHTML = `<strong style="color: #8b5cf6; font-size: 18px;">${t.pdfAssistantLabel}</strong><br><br>${formattedText}`;
                 }
                 msgBlock.appendChild(msgBubble);
                 if (tempExportElement) {
@@ -171,7 +176,6 @@ export default function MaestroKongChat({ diagnosis, handImages }: MaestroKongCh
                 blocksToCapture.push(msgBlock);
             });
 
-            // ── MOTOR ANTI-CORTES (Paginación + Guillotina) ──
             const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
             const pdfWidth = pdf.internal.pageSize.getWidth();
             const pdfHeight = pdf.internal.pageSize.getHeight();
@@ -182,7 +186,7 @@ export default function MaestroKongChat({ diagnosis, handImages }: MaestroKongCh
             };
 
             drawBackground();
-            let cursorY = 20; // Margen inicial
+            let cursorY = 20;
             const marginYMm = 20;
             const maxPageHeightMm = pdfHeight - (marginYMm * 2);
 
@@ -203,7 +207,6 @@ export default function MaestroKongChat({ diagnosis, handImages }: MaestroKongCh
                 let remainingHeightPx = canvas.height;
                 let currentYPx = 0;
 
-                // Guillotina: Rebana el bloque si es más grande que la hoja
                 while (remainingHeightPx > 0) {
                     const sliceHeightPx = Math.min(remainingHeightPx, maxPageHeightPx);
 
@@ -231,10 +234,9 @@ export default function MaestroKongChat({ diagnosis, handImages }: MaestroKongCh
                 }
             }
 
-            // ── Paginación ──
             const pageCount = pdf.getNumberOfPages();
             const now = new Date();
-            const dateStr = now.toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric' });
+            const dateFooter = now.toLocaleDateString(locale, { day: '2-digit', month: '2-digit', year: 'numeric' });
 
             for (let i = 1; i <= pageCount; i++) {
                 pdf.setPage(i);
@@ -242,15 +244,15 @@ export default function MaestroKongChat({ diagnosis, handImages }: MaestroKongCh
                 pdf.rect(0, 0, pdfWidth, 12, 'F');
                 pdf.setFontSize(8);
                 pdf.setTextColor(139, 92, 246);
-                pdf.text(`Tao Health Scanner Pro · ${dateStr} · Pág. ${i}/${pageCount}`, pdfWidth / 2, 7.5, { align: 'center' });
+                pdf.text(`${t.pdfFooter} · ${dateFooter} · ${t.pdfPage} ${i}/${pageCount}`, pdfWidth / 2, 7.5, { align: 'center' });
             }
 
-            pdf.save(`${dateStr.replace(/\//g, '-')}_TaoHealth.pdf`);
+            pdf.save(`${dateFooter.replace(/\//g, '-')}_TaoHealth.pdf`);
 
-        } catch (error: any) {
+        } catch (error: unknown) {
             console.error('Error exporting PDF:', error);
-            const errorMsg = error && error.message ? error.message : 'Error desconocido';
-            alert('Error detallado al generar PDF: ' + errorMsg);
+            const errorMsg = error instanceof Error ? error.message : 'Unknown error';
+            alert(`Error: ${errorMsg}`);
         } finally {
             if (tempExportElement && tempExportElement.parentNode) {
                 tempExportElement.parentNode.removeChild(tempExportElement);
@@ -281,7 +283,8 @@ export default function MaestroKongChat({ diagnosis, handImages }: MaestroKongCh
                         organo_afectado: diagnosis.diagnostico_wang.organo_afectado,
                         elemento_dominante: elementoDominante
                     },
-                    history: messages
+                    history: messages,
+                    language
                 })
             });
 
@@ -290,9 +293,9 @@ export default function MaestroKongChat({ diagnosis, handImages }: MaestroKongCh
             const data = await response.json();
             const assistantMessage: ChatMessage = { role: 'assistant', content: data.content };
             setMessages(prev => [...prev, assistantMessage]);
-        } catch (error: any) {
+        } catch (error) {
             console.error(error);
-            const errorAssistantMessage: ChatMessage = { role: 'assistant', content: 'Las nubes oscurecen mi visión en este momento. Inténtalo de nuevo más tarde.' };
+            const errorAssistantMessage: ChatMessage = { role: 'assistant', content: t.errorResponse };
             setMessages(prev => [...prev, errorAssistantMessage]);
         } finally {
             setIsLoading(false);
@@ -309,7 +312,7 @@ export default function MaestroKongChat({ diagnosis, handImages }: MaestroKongCh
             const response = await fetch('/api/consulta-completa', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ diagnosis })
+                body: JSON.stringify({ diagnosis, language })
             });
 
             if (!response.ok) throw new Error('Error en la consulta completa');
@@ -321,61 +324,57 @@ export default function MaestroKongChat({ diagnosis, handImages }: MaestroKongCh
                 const newMessages: ChatMessage[] = [];
 
                 if (yo?.contenido) {
-                    newMessages.push({ role: 'assistant', content: `🏯 **YO - Mente y Espiritu**\n\n${yo.contenido}` });
+                    newMessages.push({ role: 'assistant', content: `${t.sectionYO}\n\n${yo.contenido}` });
                 }
                 if (ello?.contenido) {
-                    newMessages.push({ role: 'assistant', content: `🌿 **ELLO - Cuerpo Físico**\n\n${ello.contenido}` });
+                    newMessages.push({ role: 'assistant', content: `${t.sectionELLO}\n\n${ello.contenido}` });
                 }
                 if (nosotros?.contenido) {
-                    newMessages.push({ role: 'assistant', content: `🪷 **NOSOTROS - Ancestros y Linaje**\n\n${nosotros.contenido}` });
+                    newMessages.push({ role: 'assistant', content: `${t.sectionNOSOTROS}\n\n${nosotros.contenido}` });
                 }
                 if (ellos?.contenido) {
-                    newMessages.push({ role: 'assistant', content: `🌍 **ELLOS - Entorno y Sociedad**\n\n${ellos.contenido}` });
+                    newMessages.push({ role: 'assistant', content: `${t.sectionELLOS}\n\n${ellos.contenido}` });
                 }
 
-                // 2. Pronóstico de Evolución
                 if (data.pronostico_evolucion) {
                     const { camino_enfermedad, consecuencias_cronicas } = data.pronostico_evolucion;
                     newMessages.push({
                         role: 'assistant',
-                        content: `⚖️ **PRONÓSTICO DE EVOLUCIÓN**\n\n**Camino de la enfermedad:** ${camino_enfermedad}\n\n**Consecuencias crónicas:** ${consecuencias_cronicas}`
+                        content: `${t.sectionPronostico}\n\n${t.pronosticoCamino} ${camino_enfermedad}\n\n${t.pronosticoConsecuencias} ${consecuencias_cronicas}`
                     });
                 }
 
-                // 3. Tratamiento MTC (Acupuntura, Herbolaria, Dieta)
                 if (data.tratamiento_mtc) {
                     const mtc = data.tratamiento_mtc;
-                    let mtcText = `☯️ **RECETA CLÍNICA TAOÍSTA**\n\n`;
+                    let mtcText = `${t.sectionReceta}\n\n`;
 
                     if (mtc.acupuntura?.length) {
-                        mtcText += `📍 **Acupuntura / Digitopuntura:**\n${mtc.acupuntura.map((c: string) => `• ${c}`).join('\n')}\n\n`;
+                        mtcText += `${t.recetaAcupuntura}\n${mtc.acupuntura.map((c: string) => `• ${c}`).join('\n')}\n\n`;
                     }
                     if (mtc.herbolaria_mexicana_y_china?.length) {
-                        mtcText += `🍵 **Herbolaria Integral:**\n${mtc.herbolaria_mexicana_y_china.map((c: string) => `• ${c}`).join('\n')}\n\n`;
+                        mtcText += `${t.recetaHerbolaria}\n${mtc.herbolaria_mexicana_y_china.map((c: string) => `• ${c}`).join('\n')}\n\n`;
                     }
                     if (mtc.dietetica?.length) {
-                        mtcText += `🥣 **Dietética:**\n${mtc.dietetica.map((c: string) => `• ${c}`).join('\n')}`;
+                        mtcText += `${t.recetaDietetica}\n${mtc.dietetica.map((c: string) => `• ${c}`).join('\n')}`;
                     }
                     newMessages.push({ role: 'assistant', content: mtcText });
                 }
 
-                // 4. Consejos Prácticos + Sueño Taoísta
                 if (data.consejos_practicos) {
                     const consejos = data.consejos_practicos;
-                    let consejosText = `✨ **HÁBITOS DE SANACIÓN**\n\n`;
-                    if (consejos.fisicos?.length) consejosText += `🏃 **Físicos:**\n${consejos.fisicos.map((c: string) => `• ${c}`).join('\n')}\n\n`;
-                    if (consejos.mentales?.length) consejosText += `🧠 **Mentales:**\n${consejos.mentales.map((c: string) => `• ${c}`).join('\n')}\n\n`;
-                    if (consejos.espirituales?.length) consejosText += `✨ **Espirituales:**\n${consejos.espirituales.map((c: string) => `• ${c}`).join('\n')}\n\n`;
-                    if (consejos.sueno_taoista?.length) consejosText += `🌙 **Higiene del Sueño (MTC):**\n${consejos.sueno_taoista.map((c: string) => `• ${c}`).join('\n')}`;
+                    let consejosText = `${t.sectionHabitos}\n\n`;
+                    if (consejos.fisicos?.length) consejosText += `${t.habitosFisicos}\n${consejos.fisicos.map((c: string) => `• ${c}`).join('\n')}\n\n`;
+                    if (consejos.mentales?.length) consejosText += `${t.habitosMentales}\n${consejos.mentales.map((c: string) => `• ${c}`).join('\n')}\n\n`;
+                    if (consejos.espirituales?.length) consejosText += `${t.habitosEspirituales}\n${consejos.espirituales.map((c: string) => `• ${c}`).join('\n')}\n\n`;
+                    if (consejos.sueno_taoista?.length) consejosText += `${t.habitosSueno}\n${consejos.sueno_taoista.map((c: string) => `• ${c}`).join('\n')}`;
 
                     newMessages.push({ role: 'assistant', content: consejosText });
                 }
 
-                // 5. Pregunta de Despertar
                 if (data.pregunta_despertar) {
                     newMessages.push({
                         role: 'assistant',
-                        content: `👁️ **DESPERTAR DE CONSCIENCIA**\n\n${data.pregunta_despertar}\n\n*Por favor, respóndeme aquí abajo para ajustar tu receta y recomendaciones.*`
+                        content: `${t.sectionDespertar}\n\n${data.pregunta_despertar}\n\n${t.despertarNote}`
                     });
                 }
 
@@ -383,9 +382,9 @@ export default function MaestroKongChat({ diagnosis, handImages }: MaestroKongCh
             } else {
                 throw new Error('Formato de respuesta inválido');
             }
-        } catch (error: any) {
+        } catch (error) {
             console.error(error);
-            setMessages([{ role: 'assistant', content: 'Las nubes oscurecen mi visión en este momento. Inténtalo de nuevo más tarde.' }]);
+            setMessages([{ role: 'assistant', content: t.errorResponse }]);
         } finally {
             setIsLoading(false);
         }
@@ -401,7 +400,7 @@ export default function MaestroKongChat({ diagnosis, handImages }: MaestroKongCh
             const response = await fetch('/api/consulta-quiromancia', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ diagnosis })
+                body: JSON.stringify({ diagnosis, language })
             });
 
             if (!response.ok) throw new Error('Error en la lectura de quiromancia');
@@ -413,28 +412,28 @@ export default function MaestroKongChat({ diagnosis, handImages }: MaestroKongCh
                 const q = data.quiromancia;
 
                 if (q.lineas_principales) {
-                    newMessages.push({ role: 'assistant', content: `✋ **LÍNEAS PRINCIPALES**\n\n${q.lineas_principales}` });
+                    newMessages.push({ role: 'assistant', content: `${t.sectionLineas}\n\n${q.lineas_principales}` });
                 }
                 if (q.montes_y_planetas) {
-                    newMessages.push({ role: 'assistant', content: `🌙 **MONTES Y PLANETAS**\n\n${q.montes_y_planetas}` });
+                    newMessages.push({ role: 'assistant', content: `${t.sectionMontes}\n\n${q.montes_y_planetas}` });
                 }
                 if (q.personalidad) {
-                    newMessages.push({ role: 'assistant', content: `🧬 **PERSONALIDAD**\n\n${q.personalidad}` });
+                    newMessages.push({ role: 'assistant', content: `${t.sectionPersonalidad}\n\n${q.personalidad}` });
                 }
                 if (q.sexualidad) {
-                    newMessages.push({ role: 'assistant', content: `🔥 **SEXUALIDAD Y AFECTIVIDAD**\n\n${q.sexualidad}` });
+                    newMessages.push({ role: 'assistant', content: `${t.sectionSexualidad}\n\n${q.sexualidad}` });
                 }
                 if (data.mensaje_sabio) {
-                    newMessages.push({ role: 'assistant', content: `🪷 **SABIDURÍA DEL I CHING**\n\n${data.mensaje_sabio}` });
+                    newMessages.push({ role: 'assistant', content: `${t.sectionSabiduria}\n\n${data.mensaje_sabio}` });
                 }
 
                 setMessages(newMessages);
             } else {
                 throw new Error('Formato de respuesta inválido');
             }
-        } catch (error: any) {
+        } catch (error) {
             console.error(error);
-            setMessages([{ role: 'assistant', content: 'Las nubes oscurecen mi visión en este momento. Inténtalo de nuevo más tarde.' }]);
+            setMessages([{ role: 'assistant', content: t.errorResponse }]);
         } finally {
             setIsLoading(false);
         }
@@ -445,7 +444,7 @@ export default function MaestroKongChat({ diagnosis, handImages }: MaestroKongCh
             <div className={`mystic-card rounded-[3rem] overflow-hidden flex flex-col border border-white/10 shadow-2xl relative ${isExpanded ? 'h-screen rounded-none' : 'h-[700px]'}`}>
                 <div className="absolute inset-0 bg-gradient-to-b from-primary/5 via-transparent to-transparent pointer-events-none" />
 
-                {/* Header Responsivo */}
+                {/* Header */}
                 <div className="px-6 py-6 md:px-8 md:py-6 border-b border-white/5 bg-white/5 backdrop-blur-xl flex flex-col md:flex-row items-center justify-between gap-6 relative z-10 w-full">
                     <div className="flex items-center gap-4 w-full md:w-auto">
                         <div className="relative">
@@ -456,7 +455,7 @@ export default function MaestroKongChat({ diagnosis, handImages }: MaestroKongCh
                         </div>
                         <div>
                             <h3 className="font-black text-xl gold-text tracking-tight">Maestro Kong</h3>
-                            <p className="text-[10px] text-muted-foreground uppercase tracking-widest font-bold">Guía Taoísta Integral</p>
+                            <p className="text-[10px] text-muted-foreground uppercase tracking-widest font-bold">{t.guideLabel}</p>
                         </div>
                     </div>
 
@@ -473,7 +472,7 @@ export default function MaestroKongChat({ diagnosis, handImages }: MaestroKongCh
                             ) : (
                                 <Download size={16} />
                             )}
-                            Descargar PDF
+                            {t.downloadPDF}
                         </motion.button>
 
                         <motion.button
@@ -484,7 +483,7 @@ export default function MaestroKongChat({ diagnosis, handImages }: MaestroKongCh
                             className="flex items-center justify-center gap-2 px-6 py-4 md:px-4 md:py-2 rounded-xl bg-gradient-to-r from-amber-500/20 to-orange-500/20 border border-amber-500/30 text-amber-400 hover:text-amber-300 transition-colors text-sm font-bold w-full md:w-auto disabled:opacity-50"
                         >
                             <BookOpen size={16} />
-                            Consulta Completa
+                            {t.consultaCompleta}
                         </motion.button>
 
                         <motion.button
@@ -495,7 +494,7 @@ export default function MaestroKongChat({ diagnosis, handImages }: MaestroKongCh
                             className="flex items-center justify-center gap-2 px-6 py-4 md:px-4 md:py-2 rounded-xl bg-gradient-to-r from-purple-500/20 to-pink-500/20 border border-purple-500/30 text-purple-400 hover:text-purple-300 transition-colors text-sm font-bold w-full md:w-auto disabled:opacity-50"
                         >
                             <BookOpen size={16} />
-                            Lectura Quiromancia
+                            {t.lecturaQuiromancia}
                         </motion.button>
 
                         <div className="hidden md:flex w-10 h-10 rounded-full bg-white/5 items-center justify-center text-muted-foreground hover:text-white transition-colors cursor-pointer shrink-0">
@@ -512,9 +511,9 @@ export default function MaestroKongChat({ diagnosis, handImages }: MaestroKongCh
                                 <Sparkles size={40} className="text-primary/40" />
                             </div>
                             <div className="space-y-2">
-                                <p className="text-xl font-serif italic text-white font-light">"El río fluye sin esfuerzo..."</p>
+                                <p className="text-xl font-serif italic text-white font-light">{t.emptyQuote}</p>
                                 <p className="text-sm text-muted-foreground max-w-xs mx-auto">
-                                    Pregunta sobre las marcas en tu mano o pide un consejo para equilibrar tu {diagnosis.diagnostico_wang.organo_afectado.toLowerCase()}.
+                                    {t.emptyHint}{diagnosis.diagnostico_wang.organo_afectado.toLowerCase()}.
                                 </p>
                             </div>
                         </div>
@@ -545,7 +544,7 @@ export default function MaestroKongChat({ diagnosis, handImages }: MaestroKongCh
                                         <p className="text-lg leading-relaxed font-light whitespace-pre-wrap">{parseMarkdown(m.content)}</p>
                                         {m.role === 'user' && (
                                             <div className="absolute bottom-[-18px] right-2 text-[8px] text-muted-foreground font-bold uppercase tracking-widest px-2">
-                                                Tú
+                                                {t.userLabel}
                                             </div>
                                         )}
                                     </div>
@@ -573,7 +572,7 @@ export default function MaestroKongChat({ diagnosis, handImages }: MaestroKongCh
                     <button
                         onClick={() => setIsExpanded(!isExpanded)}
                         className="absolute -top-10 left-0 z-20 p-2 rounded-lg bg-white/5 border border-white/10 text-muted-foreground hover:text-white hover:bg-white/10 transition-all"
-                        title={isExpanded ? 'Reducir' : 'Expandir'}
+                        title={isExpanded ? t.collapseTitle : t.expandTitle}
                     >
                         {isExpanded ? <Minimize size={18} /> : <Maximize size={18} />}
                     </button>
@@ -584,7 +583,7 @@ export default function MaestroKongChat({ diagnosis, handImages }: MaestroKongCh
                                 value={input}
                                 onChange={(e) => setInput(e.target.value)}
                                 onKeyDown={(e) => e.key === 'Enter' && handleSend()}
-                                placeholder="Pregunta al sabio sobre tu diagnóstico..."
+                                placeholder={t.inputPlaceholder}
                                 className="w-full bg-white/5 border border-white/10 rounded-[1.5rem] px-6 py-4 focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all text-base font-light placeholder:text-muted-foreground/50"
                             />
                             <div className="absolute right-4 top-1/2 -translate-y-1/2 flex gap-2">
@@ -602,19 +601,18 @@ export default function MaestroKongChat({ diagnosis, handImages }: MaestroKongCh
                         </motion.button>
                     </div>
 
-                    {/* Legal Footer para Chat */}
                     <div className="mt-6 flex flex-wrap justify-center gap-x-8 gap-y-2 opacity-40 hover:opacity-100 transition-opacity pb-2">
                         <Link href="/metodo" className="text-[10px] font-bold uppercase tracking-[0.2em] flex items-center gap-1.5 hover:text-primary transition-colors">
                             <BookOpen size={10} />
-                            El Método
+                            {t.metodoLink}
                         </Link>
                         <Link href="/privacidad" className="text-[10px] font-bold uppercase tracking-[0.2em] flex items-center gap-1.5 hover:text-primary transition-colors">
                             <ShieldCheck size={10} />
-                            Privacidad
+                            {t.privacidadLink}
                         </Link>
                         <Link href="/terminos" className="text-[10px] font-bold uppercase tracking-[0.2em] flex items-center gap-1.5 hover:text-primary transition-colors">
                             <Scale size={10} />
-                            Términos
+                            {t.terminosLink}
                         </Link>
                     </div>
                 </div>
