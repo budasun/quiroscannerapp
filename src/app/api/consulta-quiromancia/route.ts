@@ -100,23 +100,10 @@ export async function POST(req: NextRequest) {
             'nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free'
         ];
 
-        if (groqKey) {
-            console.log('🚀 [Quiromancia] Intentando Groq...');
-            try {
-                const content = await callAPI('llama-3.3-70b-versatile', groqKey, 'https://api.groq.com/openai/v1', {});
-                if (content) {
-                    const parsed = parseJsonRobust(content);
-                    if (parsed) {
-                        console.log('✅ Lectura de Quiromancia exitosa con Groq');
-                        return NextResponse.json(parsed);
-                    }
-                }
-            } catch { console.error('⚠️ Groq falló en Quiromancia'); }
-        }
-
+        // 1. PRIMERO: OpenRouter con Gemma 4 26B (modelo preferido)
         if (openRouterKey) {
             for (const modelId of openRouterModels) {
-                console.log(`🔄 [Quiromancia] Intentando OpenRouter con ${modelId}...`);
+                console.log(`🚀 [Quiromancia] Intentando OpenRouter con ${modelId}...`);
                 try {
                     const content = await callAPI(modelId, openRouterKey, 'https://openrouter.ai/api/v1', {
                         'HTTP-Referer': 'https://tao-health-scanner.vercel.app',
@@ -131,6 +118,21 @@ export async function POST(req: NextRequest) {
                     }
                 } catch { console.error(`⚠️ ${modelId} falló en Quiromancia`); }
             }
+        }
+
+        // 2. RESPALDO: Groq
+        if (groqKey) {
+            console.log('🔄 [Quiromancia] Intentando respaldo con Groq...');
+            try {
+                const content = await callAPI('llama-3.3-70b-versatile', groqKey, 'https://api.groq.com/openai/v1', {});
+                if (content) {
+                    const parsed = parseJsonRobust(content);
+                    if (parsed) {
+                        console.log('✅ Lectura de Quiromancia exitosa con Groq (respaldo)');
+                        return NextResponse.json(parsed);
+                    }
+                }
+            } catch { console.error('⚠️ Groq falló en Quiromancia'); }
         }
 
         throw new Error("No se pudo generar la lectura de quiromancia por ninguna vía.");

@@ -2,10 +2,11 @@ import { NextRequest, NextResponse } from 'next/server';
 
 export const maxDuration = 60;
 
-// Modelos de respaldo en OpenRouter (IDs actualizados 2026)
-const OPENROUTER_FALLBACK_MODELS = [
+// Modelos de OpenRouter (prioridad: Gemma 4 26B primero)
+const OPENROUTER_MODELS = [
+    'google/gemma-4-26b-a4b-it:free',
+    'google/gemma-4-31b-it:free',
     'meta-llama/llama-3.3-70b-instruct:free',
-    'google/gemma-3-27b-it:free',
     'meta-llama/llama-3.2-3b-instruct:free'
 ];
 
@@ -62,9 +63,46 @@ export async function POST(req: NextRequest) {
             .replace('{organo_afectado}', organo_afectado)
             .replace('{elemento_dominante}', elementoDominante);
 
-        // 1. INTENTO PRINCIPAL: GROQ
+        // 1. PRIMERO: OpenRouter con Gemma 4 26B (modelo preferido)
+        if (openRouterKey) {
+            for (const model of OPENROUTER_MODELS) {
+                console.log(`🚀 [Chat] Intentando OpenRouter con ${model}...`);
+                try {
+                    const response = await fetchWithTimeout('https://openrouter.ai/api/v1/chat/completions', {
+                        method: 'POST',
+                        headers: {
+                            'Authorization': `Bearer ${openRouterKey}`,
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({
+                            model: model,
+                            temperature: 0.7,
+                            messages: [
+                                { role: 'system', content: systemPrompt },
+                                ...history.map((m: any) => ({ role: m.role, content: m.content })),
+                                { role: 'user', content: message }
+                            ],
+                        }),
+                    }, 15000);
+
+                    if (response.ok) {
+                        const data = await response.json();
+                        const content = data.choices?.[0]?.message?.content;
+                        if (content) {
+                            console.log(`✅ Chat exitoso con ${model}`);
+                            return NextResponse.json({ content });
+                        }
+                    }
+                } catch (err) {
+                    console.error(`⚠️ ${model} falló en Chat`);
+                    continue;
+                }
+            }
+        }
+
+        // 2. RESPALDO: Groq
         if (groqKey) {
-            console.log('🗣️ [Chat] Consultando al Maestro Kong vía Groq...');
+            console.log('🔄 [Chat] Intentando respaldo con Groq...');
             try {
                 const response = await fetchWithTimeout('https://api.groq.com/openai/v1/chat/completions', {
                     method: 'POST',
@@ -88,42 +126,12 @@ export async function POST(req: NextRequest) {
                     const data = await response.json();
                     const content = data.choices?.[0]?.message?.content;
                     if (content) {
+                        console.log('✅ Chat exitoso con Groq (respaldo)');
                         return NextResponse.json({ content });
                     }
                 }
             } catch (err: any) {
-                console.error('⚠️ Groq ocupado, intentando respaldo...');
-            }
-        }
-
-        // 2. RESPALDO: OPENROUTER
-        if (openRouterKey) {
-            for (const model of OPENROUTER_FALLBACK_MODELS) {
-                try {
-                    const response = await fetchWithTimeout('https://openrouter.ai/api/v1/chat/completions', {
-                        method: 'POST',
-                        headers: {
-                            'Authorization': `Bearer ${openRouterKey}`,
-                            'Content-Type': 'application/json',
-                        },
-                        body: JSON.stringify({
-                            model: model,
-                            temperature: 0.7,
-                            messages: [
-                                { role: 'system', content: systemPrompt },
-                                ...history.map((m: any) => ({ role: m.role, content: m.content })),
-                                { role: 'user', content: message }
-                            ],
-                        }),
-                    }, 15000);
-
-                    if (response.ok) {
-                        const data = await response.json();
-                        return NextResponse.json({ content: data.choices?.[0]?.message?.content });
-                    }
-                } catch (err) {
-                    continue;
-                }
+                console.error('⚠️ Groq falló en Chat');
             }
         }
 

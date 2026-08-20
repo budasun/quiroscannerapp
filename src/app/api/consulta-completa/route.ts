@@ -88,48 +88,16 @@ export async function POST(req: NextRequest) {
             .replace('{elemento_dominante}', elemento_dominante)
             .replace('{niveles_elementos}', JSON.stringify(niveles_radar || {}));
 
-        // 1. INTENTO CON GROQ
-        if (groqKey) {
-            console.log('🚀 [Consulta] Consultando a Groq (Max Tokens: 2500)...');
-            try {
-                const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-                    method: 'POST',
-                    headers: {
-                        'Authorization': `Bearer ${groqKey}`,
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({
-                        model: "llama-3.3-70b-versatile",
-                        messages: [
-                            { role: "system", content: promptTemplate },
-                            { role: "user", content: "Genera la consulta completa basada en mi diagnóstico de manos. Devuelve solo JSON válido." }
-                        ],
-                        temperature: 0.5,
-                        max_tokens: 2500, // <--- INTEGRADO AQUÍ PARA GROQ
-                        response_format: { type: "json_object" }
-                    })
-                });
+        const openRouterModels = [
+            'google/gemma-4-26b-a4b-it:free',
+            'google/gemma-4-31b-it:free',
+            'meta-llama/llama-3.3-70b-instruct:free'
+        ];
 
-                if (response.ok) {
-                    const data = await response.json();
-                    const contentText = data.choices?.[0]?.message?.content;
-                    const parsed = parseJsonRobust(contentText);
-                    if (parsed) {
-                        console.log('✅ Consulta Completa exitosa con Groq');
-                        return NextResponse.json(parsed);
-                    }
-                }
-            } catch (err: unknown) {
-                console.error('⚠️ Groq falló en Consulta');
-            }
-        }
-
-        // 2. INTENTO CON OPENROUTER (RESPALDO)
+        // 1. PRIMERO: OpenRouter con Gemma 4 26B (modelo preferido)
         if (openRouterKey) {
-            console.log('🔄 [Consulta] Intentando respaldo con OpenRouter...');
-            const models = ['meta-llama/llama-3.3-70b-instruct:free', 'google/gemma-3-27b-it:free'];
-
-            for (const modelId of models) {
+            for (const modelId of openRouterModels) {
+                console.log(`🚀 [Consulta] Intentando OpenRouter con ${modelId}...`);
                 try {
                     const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
                         method: 'POST',
@@ -144,7 +112,7 @@ export async function POST(req: NextRequest) {
                                 { role: "user", content: "Genera la consulta completa basada en mi diagnóstico de manos. Devuelve solo JSON válido." }
                             ],
                             temperature: 0.5,
-                            max_tokens: 2500 // <--- INTEGRADO AQUÍ PARA OPENROUTER
+                            max_tokens: 2500
                         })
                     });
 
@@ -160,6 +128,42 @@ export async function POST(req: NextRequest) {
                 } catch (err) {
                     console.error(`⚠️ ${modelId} falló en Consulta`);
                 }
+            }
+        }
+
+        // 2. RESPALDO: Groq
+        if (groqKey) {
+            console.log('🔄 [Consulta] Intentando respaldo con Groq...');
+            try {
+                const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${groqKey}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        model: "llama-3.3-70b-versatile",
+                        messages: [
+                            { role: "system", content: promptTemplate },
+                            { role: "user", content: "Genera la consulta completa basada en mi diagnóstico de manos. Devuelve solo JSON válido." }
+                        ],
+                        temperature: 0.5,
+                        max_tokens: 2500,
+                        response_format: { type: "json_object" }
+                    })
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    const contentText = data.choices?.[0]?.message?.content;
+                    const parsed = parseJsonRobust(contentText);
+                    if (parsed) {
+                        console.log('✅ Consulta Completa exitosa con Groq (respaldo)');
+                        return NextResponse.json(parsed);
+                    }
+                }
+            } catch (err: unknown) {
+                console.error('⚠️ Groq falló en Consulta');
             }
         }
 
