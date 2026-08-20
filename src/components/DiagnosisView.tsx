@@ -5,19 +5,23 @@ import { DiagnosisResult } from '@/types';
 import { Radar, RadarChart, PolarGrid, PolarAngleAxis, ResponsiveContainer, PolarRadiusAxis } from 'recharts';
 import { motion } from 'framer-motion';
 import { Activity, Brain, Users, Globe, Eye, Zap, Info } from 'lucide-react';
+import { Language, translations } from '@/lib/translations';
 
 interface DiagnosisViewProps {
     result: DiagnosisResult;
     handImages?: { left: string; right: string } | null;
+    language: Language;
 }
 
-export default function DiagnosisView({ result, handImages }: DiagnosisViewProps) {
+export default function DiagnosisView({ result, handImages, language }: DiagnosisViewProps) {
+    const t = translations[language];
+
     const radarData = [
-        { subject: 'Fuego', value: result.niveles_radar.fuego, fullMark: 100 },
-        { subject: 'Tierra', value: result.niveles_radar.tierra, fullMark: 100 },
-        { subject: 'Metal', value: result.niveles_radar.metal, fullMark: 100 },
-        { subject: 'Agua', value: result.niveles_radar.agua, fullMark: 100 },
-        { subject: 'Madera', value: result.niveles_radar.madera, fullMark: 100 },
+        { subject: t.dvFuego, value: result.niveles_radar.fuego, fullMark: 100 },
+        { subject: t.dvTierra, value: result.niveles_radar.tierra, fullMark: 100 },
+        { subject: t.dvMetal, value: result.niveles_radar.metal, fullMark: 100 },
+        { subject: t.dvAgua, value: result.niveles_radar.agua, fullMark: 100 },
+        { subject: t.dvMadera, value: result.niveles_radar.madera, fullMark: 100 },
     ];
 
     return (
@@ -37,7 +41,7 @@ export default function DiagnosisView({ result, handImages }: DiagnosisViewProps
                         </h2>
                         <div className="inline-flex items-center gap-2 text-muted-foreground/60 tracking-[0.2em] font-light uppercase text-xs">
                             <span className="w-8 h-px bg-white/10" />
-                            Sabiduría del I Ching
+                            {t.dvWisdombIChing}
                             <span className="w-8 h-px bg-white/10" />
                         </div>
                     </div>
@@ -59,9 +63,9 @@ export default function DiagnosisView({ result, handImages }: DiagnosisViewProps
                                     <div className="p-2 rounded-lg bg-primary/20 text-primary shrink-0">
                                         <Activity size={20} />
                                     </div>
-                                    Ciclo Elemental
+                                    {t.dvCicloElemental}
                                 </h3>
-                                <div className="glass-pill text-[10px] text-primary font-bold whitespace-nowrap">BIO-ESTADO</div>
+                                <div className="glass-pill text-[10px] text-primary font-bold whitespace-nowrap">{t.dvBioEstado}</div>
                             </div>
 
                             {/* Contenedor del Radar con más margen */}
@@ -91,7 +95,7 @@ export default function DiagnosisView({ result, handImages }: DiagnosisViewProps
                             </div>
 
                             <p className="text-center text-[11px] md:text-xs text-muted-foreground mt-2 font-light">
-                                Mapeo de los 5 elementos basado en la coloración de los montes de Marte, Venus y Júpiter.
+                                {t.dvRadarDesc}
                             </p>
                         </div>
                     </motion.div>
@@ -109,8 +113,8 @@ export default function DiagnosisView({ result, handImages }: DiagnosisViewProps
                                     <Eye size={24} />
                                 </div>
                                 <div>
-                                    <h3 className="text-xl font-bold">Observación de Wang</h3>
-                                    <p className="text-xs text-muted-foreground">Diagnóstico por Inspección Visual (Wang Zhen)</p>
+                                    <h3 className="text-xl font-bold">{t.dvObservacionWang}</h3>
+                                    <p className="text-xs text-muted-foreground">{t.dvDiagnosticoVisual}</p>
                                 </div>
                             </div>
                             <p className="text-muted-foreground leading-relaxed font-light italic text-lg">
@@ -127,7 +131,7 @@ export default function DiagnosisView({ result, handImages }: DiagnosisViewProps
                             >
                                 <div className="flex items-center gap-2 mb-4 text-red-400">
                                     <Zap size={16} />
-                                    <span className="text-[10px] uppercase tracking-widest font-black">Órgano Alerta</span>
+                                    <span className="text-[10px] uppercase tracking-widest font-black">{t.dvOrganoAlerta}</span>
                                 </div>
                                 <p className="text-2xl font-black text-white">{result.diagnostico_wang.organo_afectado}</p>
                             </motion.div>
@@ -141,7 +145,7 @@ export default function DiagnosisView({ result, handImages }: DiagnosisViewProps
                             >
                                 <div className="flex items-center gap-2 mb-4 text-blue-400">
                                     <Info size={16} />
-                                    <span className="text-[10px] uppercase tracking-widest font-black">Significado MTC</span>
+                                    <span className="text-[10px] uppercase tracking-widest font-black">{t.dvSignificadoMTC}</span>
                                 </div>
                                 <p className="text-sm text-muted-foreground leading-snug">{result.diagnostico_wang.significado_mtc}</p>
                             </motion.div>
@@ -153,7 +157,7 @@ export default function DiagnosisView({ result, handImages }: DiagnosisViewProps
                 <div className="space-y-12">
                     <div className="flex items-center gap-4">
                         <h3 className="text-3xl font-black tracking-tight flex items-center gap-4">
-                            Visión Integral
+                            {t.dvVisionIntegral}
                             <div className="h-px w-24 bg-primary/20" />
                         </h3>
                     </div>

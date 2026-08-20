@@ -106,6 +106,22 @@ export const translations: Record<Language, Record<string, string>> = {
         sectionPersonalidad: '🧬 **PERSONALIDAD**',
         sectionSexualidad: '🔥 **SEXUALIDAD Y AFECTIVIDAD**',
         sectionSabiduria: '🪷 **SABIDURÍA DEL I CHING**',
+
+        // DiagnosisView
+        dvWisdombIChing: 'Sabiduría del I Ching',
+        dvCicloElemental: 'Ciclo Elemental',
+        dvBioEstado: 'BIO-ESTADO',
+        dvRadarDesc: 'Mapeo de los 5 elementos basado en la coloración de los montes de Marte, Venus y Júpiter.',
+        dvObservacionWang: 'Observación de Wang',
+        dvDiagnosticoVisual: 'Diagnóstico por Inspección Visual (Wang Zhen)',
+        dvOrganoAlerta: 'Órgano Alerta',
+        dvSignificadoMTC: 'Significado MTC',
+        dvVisionIntegral: 'Visión Integral',
+        dvFuego: 'Fuego',
+        dvTierra: 'Tierra',
+        dvMetal: 'Metal',
+        dvAgua: 'Agua',
+        dvMadera: 'Madera',
     },
     en: {
         // HandScanner
@@ -212,6 +228,22 @@ export const translations: Record<Language, Record<string, string>> = {
         sectionPersonalidad: '🧬 **PERSONALITY**',
         sectionSexualidad: '🔥 **SEXUALITY AND AFFECTIVITY**',
         sectionSabiduria: '🪷 **WISDOM OF THE I CHING**',
+
+        // DiagnosisView
+        dvWisdombIChing: 'Wisdom of the I Ching',
+        dvCicloElemental: 'Elemental Cycle',
+        dvBioEstado: 'BIO-STATE',
+        dvRadarDesc: 'Mapping of the 5 elements based on the coloration of the mounts of Mars, Venus and Jupiter.',
+        dvObservacionWang: 'Wang Observation',
+        dvDiagnosticoVisual: 'Diagnosis by Visual Inspection (Wang Zhen)',
+        dvOrganoAlerta: 'Organ Alert',
+        dvSignificadoMTC: 'TCM Meaning',
+        dvVisionIntegral: 'Integral Vision',
+        dvFuego: 'Fire',
+        dvTierra: 'Earth',
+        dvMetal: 'Metal',
+        dvAgua: 'Water',
+        dvMadera: 'Wood',
     },
     fr: {
         // HandScanner
@@ -318,5 +350,21 @@ export const translations: Record<Language, Record<string, string>> = {
         sectionPersonalidad: '🧬 **PERSONNALITÉ**',
         sectionSexualidad: '🔥 **SEXUALITÉ ET AFFECTIVITÉ**',
         sectionSabiduria: '🪷 **SAGESSE DU YI JING**',
+
+        // DiagnosisView
+        dvWisdombIChing: 'Sagesse du Yi Jing',
+        dvCicloElemental: 'Cycle des Éléments',
+        dvBioEstado: 'BIO-ÉTAT',
+        dvRadarDesc: 'Cartographie des 5 éléments basée sur la coloration des monts de Mars, Vénus et Jupiter.',
+        dvObservacionWang: 'Observation de Wang',
+        dvDiagnosticoVisual: 'Diagnostic par Inspection Visuelle (Wang Zhen)',
+        dvOrganoAlerta: 'Organe d\'Alerte',
+        dvSignificadoMTC: 'Signification MTC',
+        dvVisionIntegral: 'Vision Intégrale',
+        dvFuego: 'Feu',
+        dvTierra: 'Terre',
+        dvMetal: 'Métal',
+        dvAgua: 'Eau',
+        dvMadera: 'Bois',
     }
 };

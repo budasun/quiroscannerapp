@@ -218,7 +218,7 @@ export default function TaoHealthScanner() {
                 <h2 className="text-4xl md:text-6xl font-black text-white">{t.yourEnergyMap}</h2>
               </div>
 
-              {diagnosis && <DiagnosisView result={diagnosis} handImages={handImages} />}
+              {diagnosis && <DiagnosisView result={diagnosis} handImages={handImages} language={language} />}
 
               <div id="chat" className="relative">
                 <div className="absolute inset-0 bg-primary/5 blur-[100px] -z-10" />
