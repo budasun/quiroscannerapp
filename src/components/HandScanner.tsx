@@ -6,7 +6,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Language, translations } from '@/lib/translations';
 
 interface HandScannerProps {
-    onAnalyze: (left: string, right: string) => void;
+    onAnalyze: (left: string, right: string, language: Language) => void;
     isLoading: boolean;
     language: Language;
     setLanguage: (lang: Language) => void;
@@ -92,7 +92,7 @@ export default function HandScanner({ onAnalyze, isLoading, language, setLanguag
 
     const handleAnalyze = () => {
         if (leftHand && rightHand) {
-            onAnalyze(leftHand, rightHand);
+            onAnalyze(leftHand, rightHand, language);
         }
     };
 

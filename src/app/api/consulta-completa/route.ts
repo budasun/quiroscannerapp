@@ -2,6 +2,15 @@ import { NextRequest, NextResponse } from 'next/server';
 
 export const maxDuration = 60;
 
+const LANGUAGE_NAMES: Record<string, string> = {
+    es: 'Spanish',
+    en: 'English',
+    fr: 'French',
+};
+
+const LANGUAGE_RULE = `
+⚠️ REGLA DE IDIOMA ESTRICTA: Todo el contenido estructurado de la respuesta JSON (consulta_completa: yo, ello, nosotros, ellos; pronostico_evolucion; tratamiento_mtc; consejos_practicos; pregunta_despertar) DEBE estar redactado ÚNICAMENTE en idioma {languageName}. NO uses español ni ningún otro idioma. Responde COMPLETAMENTE en {languageName}.`;
+
 const SYSTEM_PROMPT = `Eres el Gran Maestro Taoísta Wang Chenxia, especializado en la lectura integral de manos, la Medicina Tradicional China (MTC), Herbolaria Milenaria Mexicana y la visión integral de Ken Wilber.
 
 Tu objetivo es entregar una CONSULTA COMPLETA profunda, accionable y personalizada basada en el diagnóstico de las manos del usuario, y finalizar haciendo preguntas clave sobre su biometría y estilo de vida para ajustar el tratamiento.
@@ -64,7 +73,7 @@ function parseJsonRobust(content: string): Record<string, unknown> | null {
 export async function POST(req: NextRequest) {
     console.log('--- Iniciando Consulta Completa Integral Nutrita ---');
     try {
-        const { diagnosis } = await req.json();
+        const { diagnosis, language = 'es' } = await req.json();
         if (!diagnosis) return NextResponse.json({ error: 'Falta el diagnóstico' }, { status: 400 });
 
         const groqKey = process.env.GROQ_API_KEY;
@@ -83,10 +92,12 @@ export async function POST(req: NextRequest) {
             }
         }
 
+        const languageName = LANGUAGE_NAMES[language] || 'Spanish';
         const promptTemplate = SYSTEM_PROMPT
             .replace('{organo_afectado}', organo_afectado)
             .replace('{elemento_dominante}', elemento_dominante)
-            .replace('{niveles_elementos}', JSON.stringify(niveles_radar || {}));
+            .replace('{niveles_elementos}', JSON.stringify(niveles_radar || {}))
+            + LANGUAGE_RULE.replace(/{languageName}/g, languageName);
 
         const openRouterModels = [
             'google/gemma-4-26b-a4b-it:free',

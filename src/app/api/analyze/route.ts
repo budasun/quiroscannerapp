@@ -2,6 +2,12 @@ import { NextRequest, NextResponse } from 'next/server';
 
 export const maxDuration = 120;
 
+const LANGUAGE_NAMES: Record<string, string> = {
+    es: 'Spanish',
+    en: 'English',
+    fr: 'French',
+};
+
 const SYSTEM_PROMPT = `Actúa como el Gran Maestro Wang Chenxia (Diagnóstico por la mano) y Ken Wilber (Visión Integral).
 Tu tarea es hacer una DISECCIÓN VISUAL de estas manos (Izquierda=Ancestral/Yin, Derecha=Actual/Yang).
 
@@ -28,6 +34,9 @@ FORMATO JSON OBLIGATORIO (Responde SOLO esto, sin texto antes ni después, respe
     "ellos": { "titulo": "Entorno (Ellos)", "detalle": "Impacto social actual (Mano Der)." }
   }
 }`;
+
+const LANGUAGE_RULE = `
+⚠️ REGLA DE IDIOMA ESTRICTA: Todo el contenido del JSON de respuesta (mensaje_maestro, observacion_visual, organo_afectado, significado_mtc, y todos los campos de cuadrantes_integral) DEBE estar redactado ÚNICAMENTE en idioma {languageName}. NO uses español ni ningún otro idioma. Responde COMPLETAMENTE en {languageName}.`;
 
 function cleanJsonResponse(content: string): string {
     let cleaned = content.trim();
@@ -63,11 +72,14 @@ function validateAndFixDiagnosis(parsed: { [key: string]: unknown }): object | n
 export async function POST(req: NextRequest) {
     console.log('--- Iniciando Análisis Tao (Vía OpenRouter) ---');
     try {
-        const { leftHand, rightHand } = await req.json();
+        const { leftHand, rightHand, language = 'es' } = await req.json();
 
         if (!leftHand || !rightHand) {
             return NextResponse.json({ error: 'Faltan las imágenes de las manos' }, { status: 400 });
         }
+
+        const languageName = LANGUAGE_NAMES[language] || 'Spanish';
+        const systemPromptWithLang = SYSTEM_PROMPT + LANGUAGE_RULE.replace(/{languageName}/g, languageName);
 
         const openRouterKey = process.env.OPENROUTER_API_KEY;
         if (!openRouterKey) {
@@ -94,7 +106,7 @@ export async function POST(req: NextRequest) {
                 const payload = {
                     model: model,
                     messages: [
-                        { role: "system", content: SYSTEM_PROMPT },
+                        { role: "system", content: systemPromptWithLang },
                         {
                             role: "user",
                             content: [

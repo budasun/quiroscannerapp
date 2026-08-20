@@ -2,6 +2,15 @@ import { NextRequest, NextResponse } from 'next/server';
 
 export const maxDuration = 90;
 
+const LANGUAGE_NAMES: Record<string, string> = {
+    es: 'Spanish',
+    en: 'English',
+    fr: 'French',
+};
+
+const LANGUAGE_RULE = `
+⚠️ REGLA DE IDIOMA ESTRICTA: Todo el contenido estructurado de la respuesta JSON (quiromancia: lineas_principales, montes_y_planetas, personalidad, sexualidad; mensaje_sabio) DEBE estar redactado ÚNICAMENTE en idioma {languageName}. NO uses español ni ningún otro idioma. Responde COMPLETAMENTE en {languageName}.`;
+
 const SYSTEM_PROMPT = `Eres el Gran Maestro de Quiromancia, heredero de la tradición milenaria de lectura de manos. Tu conocimiento abarca la quiromancia clásica, la astrología manual y la psicología de la personalidad.
 
 Tu tarea es realizar una LECTURA DE QUIROMANCIA completa y detallada basada en el diagnóstico de las manos del usuario.
@@ -45,7 +54,7 @@ function parseJsonRobust(content: string): Record<string, unknown> | null {
 export async function POST(req: NextRequest) {
     console.log('--- Iniciando Lectura de Quiromancia ---');
     try {
-        const { diagnosis } = await req.json();
+        const { diagnosis, language = 'es' } = await req.json();
         if (!diagnosis) return NextResponse.json({ error: 'Falta el diagnóstico' }, { status: 400 });
 
         const openRouterKey = process.env.OPENROUTER_API_KEY;
@@ -64,10 +73,12 @@ export async function POST(req: NextRequest) {
             }
         }
 
+        const languageName = LANGUAGE_NAMES[language] || 'Spanish';
         const prompt = SYSTEM_PROMPT
             .replace('{organo_afectado}', organo_afectado)
             .replace('{elemento_dominante}', elemento_dominante)
-            .replace('{niveles_elementos}', JSON.stringify(niveles_radar || {}));
+            .replace('{niveles_elementos}', JSON.stringify(niveles_radar || {}))
+            + LANGUAGE_RULE.replace(/{languageName}/g, languageName);
 
         const callAPI = async (model: string, apiKey: string, baseUrl: string, extraHeaders: Record<string, string> = {}) => {
             const response = await fetch(`${baseUrl}/chat/completions`, {

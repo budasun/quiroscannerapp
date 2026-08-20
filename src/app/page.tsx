@@ -48,14 +48,14 @@ export default function TaoHealthScanner() {
     }
   }, [handImages]);
 
-  const handleAnalyze = async (left: string, right: string) => {
+  const handleAnalyze = async (left: string, right: string, lang: Language) => {
     setIsLoading(true);
     setHandImages({ left, right });
     try {
       const response = await fetch('/api/analyze', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ leftHand: left, rightHand: right }),
+        body: JSON.stringify({ leftHand: left, rightHand: right, language: lang }),
       });
 
       if (!response.ok) {
