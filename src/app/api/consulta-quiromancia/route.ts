@@ -43,13 +43,15 @@ function parseJsonRobust(content: string): Record<string, unknown> | null {
 }
 
 export async function POST(req: NextRequest) {
-    console.log('--- Iniciando Lectura de Quiromancia ---');
+    console.log('--- Iniciando Quiromancia (Groq) ---');
     try {
         const { diagnosis } = await req.json();
         if (!diagnosis) return NextResponse.json({ error: 'Falta el diagnóstico' }, { status: 400 });
 
-        const openRouterKey = process.env.OPENROUTER_API_KEY;
         const groqKey = process.env.GROQ_API_KEY;
+        if (!groqKey) {
+            return NextResponse.json({ error: 'GROQ_API_KEY no configurada' }, { status: 500 });
+        }
 
         const diagnostico_wang = (diagnosis as Record<string, any>).diagnostico_wang;
         const niveles_radar = (diagnosis as Record<string, any>).niveles_radar;
@@ -69,73 +71,40 @@ export async function POST(req: NextRequest) {
             .replace('{elemento_dominante}', elemento_dominante)
             .replace('{niveles_elementos}', JSON.stringify(niveles_radar || {}));
 
-        const callAPI = async (model: string, apiKey: string, baseUrl: string, extraHeaders: Record<string, string> = {}) => {
-            const response = await fetch(`${baseUrl}/chat/completions`, {
+        console.log('📡 [Quiromancia] Intentando Groq (openai/gpt-oss-120b)...');
+        try {
+            const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
                 method: 'POST',
                 headers: {
-                    'Authorization': `Bearer ${apiKey}`,
-                    'Content-Type': 'application/json',
-                    ...extraHeaders
+                    'Authorization': `Bearer ${groqKey}`,
+                    'Content-Type': 'application/json'
                 },
                 body: JSON.stringify({
-                    model,
+                    model: "openai/gpt-oss-120b",
                     messages: [
                         { role: "system", content: prompt },
                         { role: "user", content: "Realiza la lectura de quiromancia completa basada en mi diagnóstico de manos. Devuelve solo JSON válido." }
                     ],
                     temperature: 0.6,
-                    max_tokens: 2048
+                    max_tokens: 3000,
+                    response_format: { type: "json_object" }
                 })
             });
+
             if (response.ok) {
                 const data = await response.json();
-                return data.choices?.[0]?.message?.content || null;
-            }
-            return null;
-        };
-
-        const openRouterModels = [
-            'google/gemma-4-26b-a4b-it:free',
-            'google/gemma-4-31b-it:free',
-            'nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free'
-        ];
-
-        // 1. PRIMERO: OpenRouter con Gemma 4 26B (modelo preferido)
-        if (openRouterKey) {
-            for (const modelId of openRouterModels) {
-                console.log(`🚀 [Quiromancia] Intentando OpenRouter con ${modelId}...`);
-                try {
-                    const content = await callAPI(modelId, openRouterKey, 'https://openrouter.ai/api/v1', {
-                        'HTTP-Referer': 'https://tao-health-scanner.vercel.app',
-                        'X-Title': 'Tao Health Scanner'
-                    });
-                    if (content) {
-                        const parsed = parseJsonRobust(content);
-                        if (parsed) {
-                            console.log(`✅ Lectura de Quiromancia exitosa con ${modelId}`);
-                            return NextResponse.json(parsed);
-                        }
-                    }
-                } catch { console.error(`⚠️ ${modelId} falló en Quiromancia`); }
-            }
-        }
-
-        // 2. RESPALDO: Groq
-        if (groqKey) {
-            console.log('🔄 [Quiromancia] Intentando respaldo con Groq...');
-            try {
-                const content = await callAPI('llama-3.3-70b-versatile', groqKey, 'https://api.groq.com/openai/v1', {});
-                if (content) {
-                    const parsed = parseJsonRobust(content);
-                    if (parsed) {
-                        console.log('✅ Lectura de Quiromancia exitosa con Groq (respaldo)');
-                        return NextResponse.json(parsed);
-                    }
+                const contentText = data.choices?.[0]?.message?.content;
+                const parsed = parseJsonRobust(contentText);
+                if (parsed) {
+                    console.log('✅ Quiromancia exitosa con Groq');
+                    return NextResponse.json(parsed);
                 }
-            } catch { console.error('⚠️ Groq falló en Quiromancia'); }
+            }
+        } catch (err) {
+            console.error('⚠️ Groq falló:', err);
         }
 
-        throw new Error("No se pudo generar la lectura de quiromancia por ninguna vía.");
+        throw new Error("No se pudo generar la quiromancia.");
 
     } catch (error: unknown) {
         const errorMessage = error instanceof Error ? error.message : String(error);
