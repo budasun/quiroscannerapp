@@ -8,15 +8,6 @@ const LANGUAGE_NAMES: Record<string, string> = {
     fr: 'French',
 };
 
-// Modelos de OpenRouter (prioridad: Gemma 4 26B primero)
-const OPENROUTER_MODELS = [
-    'google/gemma-4-26b-a4b-it:free',
-    'google/gemma-4-31b-it:free',
-    'meta-llama/llama-3.3-70b-instruct:free',
-    'meta-llama/llama-3.2-3b-instruct:free'
-];
-
-// AQUÍ ESTÁ TU PROMPT NUTRIDO SIN CAMBIAR TU ESTRUCTURA
 const SYSTEM_PROMPT_TEMPLATE = `Eres el Gran Maestro Taoísta Wang Chenxia, un sabio experto en Medicina Tradicional China (MTC) y Herbolaria Milenaria Mexicana.
 
 CONTEXTO DEL USUARIO:
@@ -46,13 +37,15 @@ async function fetchWithTimeout(resource: string, options: any = {}, timeoutMs =
 }
 
 export async function POST(req: NextRequest) {
-    console.log('--- Iniciando Chat con Maestro Kong Nutrito ---');
+    console.log('--- Iniciando Chat con Maestro Kong (Groq) ---');
     try {
         const { message, diagnosis, history = [], language = 'es' } = await req.json();
         if (!message || !diagnosis) return NextResponse.json({ error: 'Faltan datos' }, { status: 400 });
 
         const groqKey = process.env.GROQ_API_KEY;
-        const openRouterKey = process.env.OPENROUTER_API_KEY;
+        if (!groqKey) {
+            return NextResponse.json({ error: 'GROQ_API_KEY no configurada' }, { status: 500 });
+        }
 
         const { diagnostico_wang, niveles_radar } = diagnosis as any;
         const organo_afectado = diagnostico_wang?.organo_afectado || 'No detectado';
@@ -71,9 +64,13 @@ export async function POST(req: NextRequest) {
             .replace('{elemento_dominante}', elementoDominante)
             + `\n\n⚠️ REGLA DE IDIOMA ESTRICTA: Responde COMPLETAMENTE en idioma ${languageName}. NO uses español ni ningún otro idioma.`;
 
-        // 1. PRIMERO: Groq con qwen/qwen3.6-27b
-        if (groqKey) {
-            console.log('📡 [Chat] Intentando Groq (qwen/qwen3.6-27b)...');
+        const GROQ_MODELS = [
+            { id: "openai/gpt-oss-120b", name: "GPT-OSS 120B" },
+            { id: "qwen/qwen3.6-27b", name: "Qwen 3.6 27B" }
+        ];
+
+        for (const { id, name } of GROQ_MODELS) {
+            console.log(`📡 [Chat] Intentando Groq (${name})...`);
             try {
                 const response = await fetchWithTimeout('https://api.groq.com/openai/v1/chat/completions', {
                     method: 'POST',
@@ -82,7 +79,7 @@ export async function POST(req: NextRequest) {
                         'Content-Type': 'application/json'
                     },
                     body: JSON.stringify({
-                        model: "qwen/qwen3.6-27b",
+                        model: id,
                         messages: [
                             { role: "system", content: systemPrompt },
                             ...history.map((m: any) => ({ role: m.role, content: m.content })),
@@ -97,53 +94,16 @@ export async function POST(req: NextRequest) {
                     const data = await response.json();
                     const content = data.choices?.[0]?.message?.content;
                     if (content) {
-                        console.log('✅ Chat exitoso con Groq (qwen/qwen3.6-27b)');
+                        console.log(`✅ Chat exitoso con Groq (${name})`);
                         return NextResponse.json({ content });
                     }
                 }
             } catch (err: any) {
-                console.error('⚠️ Groq falló en Chat:', err.message);
+                console.error(`⚠️ Groq ${name} falló:`, err.message);
             }
         }
 
-        // 2. RESPALDO: OpenRouter con Gemma 4
-        if (openRouterKey) {
-            for (const model of OPENROUTER_MODELS) {
-                console.log(`🔄 [Chat] Intentando respaldo OpenRouter con ${model}...`);
-                try {
-                    const response = await fetchWithTimeout('https://openrouter.ai/api/v1/chat/completions', {
-                        method: 'POST',
-                        headers: {
-                            'Authorization': `Bearer ${openRouterKey}`,
-                            'Content-Type': 'application/json',
-                        },
-                        body: JSON.stringify({
-                            model: model,
-                            temperature: 0.7,
-                            messages: [
-                                { role: 'system', content: systemPrompt },
-                                ...history.map((m: any) => ({ role: m.role, content: m.content })),
-                                { role: 'user', content: message }
-                            ],
-                        }),
-                    }, 15000);
-
-                    if (response.ok) {
-                        const data = await response.json();
-                        const content = data.choices?.[0]?.message?.content;
-                        if (content) {
-                            console.log(`✅ Chat exitoso con ${model}`);
-                            return NextResponse.json({ content });
-                        }
-                    }
-                } catch (err) {
-                    console.error(`⚠️ ${model} falló en Chat`);
-                    continue;
-                }
-            }
-        }
-
-        throw new Error('Todas las vías de comunicación cerradas.');
+        throw new Error('Todos los modelos de Groq fallaron.');
 
     } catch (error: any) {
         return NextResponse.json({
