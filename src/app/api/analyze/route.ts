@@ -70,7 +70,7 @@ function validateAndFixDiagnosis(parsed: { [key: string]: unknown }): object | n
 }
 
 export async function POST(req: NextRequest) {
-    console.log('--- Iniciando Análisis Tao (Vía OpenRouter) ---');
+    console.log('--- Iniciando Análisis Tao (Vía Groq Vision) ---');
     try {
         const { leftHand, rightHand, language = 'es' } = await req.json();
 
@@ -78,22 +78,20 @@ export async function POST(req: NextRequest) {
             return NextResponse.json({ error: 'Faltan las imágenes de las manos' }, { status: 400 });
         }
 
+        const groqApiKey = process.env.GROQ_API_KEY;
+        if (!groqApiKey) {
+            console.error('❌ Error: GROQ_API_KEY no encontrada en .env.local');
+            return NextResponse.json({ error: 'Llave de Groq no configurada' }, { status: 500 });
+        }
+
         const languageName = LANGUAGE_NAMES[language] || 'Spanish';
         const systemPromptWithLang = SYSTEM_PROMPT + LANGUAGE_RULE.replace(/{languageName}/g, languageName);
 
-        const openRouterKey = process.env.OPENROUTER_API_KEY;
-        if (!openRouterKey) {
-            console.error('❌ Error: OPENROUTER_API_KEY no encontrada en .env.local');
-            return NextResponse.json({ error: 'Llave de OpenRouter no configurada' }, { status: 500 });
-        }
-
         const MODELS_TO_TRY = [
-            "google/gemma-4-26b-a4b-it:free",
-            "google/gemma-4-31b-it:free",
-            "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free",
-            "nvidia/nemotron-nano-12b-v2-vl:free"
+            "llama-3.2-11b-vision-preview",
+            "llama-3.2-90b-vision-preview"
         ];
-        const API_URL = 'https://openrouter.ai/api/v1/chat/completions';
+        const API_URL = 'https://api.groq.com/openai/v1/chat/completions';
 
         let contentText = "";
         let success = false;
@@ -106,17 +104,16 @@ export async function POST(req: NextRequest) {
                 const payload = {
                     model: model,
                     messages: [
-                        { role: "system", content: systemPromptWithLang },
                         {
                             role: "user",
                             content: [
-                                { type: "text", text: "Analiza ambas manos (IZQUIERDA = energía ancestral/Yin, DERECHA = energía actual/Yang). Busca marcas físicas reales: lunares, manchas, venas, color de uñas, líneas. Responde ÚNICAMENTE con JSON válido." },
+                                { type: "text", text: systemPromptWithLang + "\n\n---\n\nAnaliza ambas manos (IZQUIERDA = energía ancestral/Yin, DERECHA = energía actual/Yang). Busca marcas físicas reales: lunares, manchas, venas, color de uñas, líneas. Responde ÚNICAMENTE con JSON válido." },
                                 { type: "image_url", image_url: { url: leftHand } },
                                 { type: "image_url", image_url: { url: rightHand } }
                             ]
                         }
                     ],
-                    temperature: 0.5,
+                    temperature: 0.3,
                     max_tokens: 1024
                 };
 
@@ -126,10 +123,8 @@ export async function POST(req: NextRequest) {
                 const response = await fetch(API_URL, {
                     method: 'POST',
                     headers: {
-                        'Authorization': `Bearer ${openRouterKey}`,
+                        'Authorization': `Bearer ${groqApiKey}`,
                         'Content-Type': 'application/json',
-                        'HTTP-Referer': 'https://tao-health-scanner.vercel.app',
-                        'X-Title': 'Tao Health Scanner'
                     },
                     body: JSON.stringify(payload),
                     signal: controller.signal
@@ -149,7 +144,7 @@ export async function POST(req: NextRequest) {
                 } else {
                     const errDetail = await response.text();
                     lastError = `Status ${response.status}: ${errDetail}`;
-                    console.warn(`⚠️ ${model} falló: ${lastError}`);
+                    console.warn(`⚠️ ${model} falló en Groq: ${lastError}`);
                 }
             } catch (err: any) {
                 lastError = err.message;
@@ -158,12 +153,12 @@ export async function POST(req: NextRequest) {
         }
 
         if (!success) {
-            throw new Error(`Todos los modelos de OpenRouter fallaron o no respondieron. Último error: ${lastError}`);
+            throw new Error(`Los modelos de Groq fallaron o no respondieron. Último error: ${lastError}`);
         }
 
         const parsed = parseJsonRobust(contentText);
         if (!parsed) {
-            console.error("❌ OpenRouter no devolvió un JSON válido:", contentText);
+            console.error("❌ Groq no devolvió un JSON válido:", contentText);
             throw new Error('Formato de diagnóstico inválido');
         }
 
