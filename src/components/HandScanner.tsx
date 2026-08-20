@@ -3,23 +3,19 @@
 import React, { useState, useRef } from 'react';
 import { Camera, Sparkles, RefreshCw, AlertCircle, X, CheckCircle2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Language, translations } from '@/lib/translations';
 
 interface HandScannerProps {
-    onAnalyze: (left: string, right: string, language: Language) => void;
+    onAnalyze: (left: string, right: string) => void;
     isLoading: boolean;
-    language: Language;
-    setLanguage: (lang: Language) => void;
 }
 
-export default function HandScanner({ onAnalyze, isLoading, language, setLanguage }: HandScannerProps) {
+export default function HandScanner({ onAnalyze, isLoading }: HandScannerProps) {
     const [leftHand, setLeftHand] = useState<string | null>(null);
     const [rightHand, setRightHand] = useState<string | null>(null);
     const leftInputRef = useRef<HTMLInputElement>(null);
     const rightInputRef = useRef<HTMLInputElement>(null);
 
-    const t = translations[language];
-
+    // Función de compresión ultra-ligera y segura
     const resizeImage = (file: File): Promise<string> => {
         return new Promise((resolve, reject) => {
             const reader = new FileReader();
@@ -29,6 +25,7 @@ export default function HandScanner({ onAnalyze, isLoading, language, setLanguag
                 img.src = event.target?.result as string;
                 img.onload = () => {
                     const canvas = document.createElement('canvas');
+                    // Bajamos a 512px: ideal para modelos de visión sin perder detalle de líneas
                     const MAX_SIDE = 512;
                     let width = img.width;
                     let height = img.height;
@@ -55,8 +52,11 @@ export default function HandScanner({ onAnalyze, isLoading, language, setLanguag
                         ctx.drawImage(img, 0, 0, width, height);
                     }
 
+                    // Exportar a JPEG con calidad 0.5 (Súper ligero)
                     const base64 = canvas.toDataURL('image/jpeg', 0.5);
                     const sizeKB = Math.round((base64.length * 3) / 4 / 1024);
+
+                    // Este log aparecerá en la consola de tu NAVEGADOR (F12)
                     console.log(`🚀 Imagen Optimizada: ${width}x${height}, Peso: ~${sizeKB}KB`);
 
                     resolve(base64);
@@ -76,7 +76,7 @@ export default function HandScanner({ onAnalyze, isLoading, language, setLanguag
                 else setRightHand(resizedImage);
             } catch (error) {
                 console.error("Error processing image:", error);
-                alert(t.imageError);
+                alert("Hubo un error al procesar la imagen. Intenta con otra.");
             }
         }
     };
@@ -86,21 +86,16 @@ export default function HandScanner({ onAnalyze, isLoading, language, setLanguag
         if (side === 'left') setLeftHand(null);
         else setRightHand(null);
 
+        // Limpiar el input para permitir volver a subir la misma foto si el usuario quiere
         if (side === 'left' && leftInputRef.current) leftInputRef.current.value = '';
         if (side === 'right' && rightInputRef.current) rightInputRef.current.value = '';
     };
 
     const handleAnalyze = () => {
         if (leftHand && rightHand) {
-            onAnalyze(leftHand, rightHand, language);
+            onAnalyze(leftHand, rightHand);
         }
     };
-
-    const flags: { lang: Language; label: string; emoji: string }[] = [
-        { lang: 'es', label: 'Español', emoji: '🇲🇽' },
-        { lang: 'en', label: 'English', emoji: '🇬🇧' },
-        { lang: 'fr', label: 'Français', emoji: '🇫🇷' },
-    ];
 
     return (
         <div className="max-w-5xl mx-auto px-4">
@@ -108,8 +103,8 @@ export default function HandScanner({ onAnalyze, isLoading, language, setLanguag
                 {/* Left Hand Card */}
                 <motion.div whileHover={{ scale: 1.01 }} className="flex flex-col gap-4 group">
                     <div className="flex justify-between items-center px-2">
-                        <h3 className="text-lg font-bold tracking-tight text-white/90">{t.leftHandTitle}</h3>
-                        <span className="text-[10px] uppercase tracking-widest text-muted-foreground bg-white/5 px-2 py-1 rounded">{t.leftHandBadge}</span>
+                        <h3 className="text-lg font-bold tracking-tight text-white/90">Mano Izquierda</h3>
+                        <span className="text-[10px] uppercase tracking-widest text-muted-foreground bg-white/5 px-2 py-1 rounded">Ancestros • Pasado</span>
                     </div>
 
                     <div
@@ -119,7 +114,7 @@ export default function HandScanner({ onAnalyze, isLoading, language, setLanguag
                         <AnimatePresence mode="wait">
                             {leftHand ? (
                                 <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="w-full h-full relative">
-                                    <img src={leftHand} alt="Left" className="w-full h-full object-cover rounded-[1.8rem]" />
+                                    <img src={leftHand} alt="Izquierda" className="w-full h-full object-cover rounded-[1.8rem]" />
                                     <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-end justify-center pb-8">
                                         <button onClick={(e) => removeImage(e, 'left')} className="bg-red-500/20 hover:bg-red-500/40 text-red-100 p-3 rounded-full backdrop-blur-md transition-colors">
                                             <X size={20} />
@@ -135,8 +130,8 @@ export default function HandScanner({ onAnalyze, isLoading, language, setLanguag
                                         <Camera size={32} className="text-primary/60 group-hover:text-primary transition-colors" />
                                     </div>
                                     <div>
-                                        <p className="text-white font-medium">{t.leftHandCapture}</p>
-                                        <p className="text-xs text-muted-foreground mt-1">{t.leftHandUpload}</p>
+                                        <p className="text-white font-medium">Captura tu pasado</p>
+                                        <p className="text-xs text-muted-foreground mt-1">Sube la foto de tu palma izquierda</p>
                                     </div>
                                 </motion.div>
                             )}
@@ -148,8 +143,8 @@ export default function HandScanner({ onAnalyze, isLoading, language, setLanguag
                 {/* Right Hand Card */}
                 <motion.div whileHover={{ scale: 1.01 }} className="flex flex-col gap-4 group">
                     <div className="flex justify-between items-center px-2">
-                        <h3 className="text-lg font-bold tracking-tight text-white/90">{t.rightHandTitle}</h3>
-                        <span className="text-[10px] uppercase tracking-widest text-muted-foreground bg-white/5 px-2 py-1 rounded">{t.rightHandBadge}</span>
+                        <h3 className="text-lg font-bold tracking-tight text-white/90">Mano Derecha</h3>
+                        <span className="text-[10px] uppercase tracking-widest text-muted-foreground bg-white/5 px-2 py-1 rounded">Acción • Presente</span>
                     </div>
 
                     <div
@@ -159,7 +154,7 @@ export default function HandScanner({ onAnalyze, isLoading, language, setLanguag
                         <AnimatePresence mode="wait">
                             {rightHand ? (
                                 <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="w-full h-full relative">
-                                    <img src={rightHand} alt="Right" className="w-full h-full object-cover rounded-[1.8rem]" />
+                                    <img src={rightHand} alt="Derecha" className="w-full h-full object-cover rounded-[1.8rem]" />
                                     <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-end justify-center pb-8">
                                         <button onClick={(e) => removeImage(e, 'right')} className="bg-red-500/20 hover:bg-red-500/40 text-red-100 p-3 rounded-full backdrop-blur-md transition-colors">
                                             <X size={20} />
@@ -175,8 +170,8 @@ export default function HandScanner({ onAnalyze, isLoading, language, setLanguag
                                         <Camera size={32} className="text-primary/60 group-hover:text-primary transition-colors" />
                                     </div>
                                     <div>
-                                        <p className="text-white font-medium">{t.rightHandCapture}</p>
-                                        <p className="text-xs text-muted-foreground mt-1">{t.rightHandUpload}</p>
+                                        <p className="text-white font-medium">Define tu presente</p>
+                                        <p className="text-xs text-muted-foreground mt-1">Sube la foto de tu palma derecha</p>
                                     </div>
                                 </motion.div>
                             )}
@@ -209,37 +204,16 @@ export default function HandScanner({ onAnalyze, isLoading, language, setLanguag
                         {isLoading ? (
                             <>
                                 <RefreshCw className="animate-spin" />
-                                <span>{t.loadingDiagnosis}</span>
+                                <span>Diseccionando el Tao...</span>
                             </>
                         ) : (
                             <>
                                 <Sparkles className={leftHand && rightHand ? "animate-pulse" : ""} />
-                                <span>{t.startDiagnosis}</span>
+                                <span>Iniciar Diagnóstico</span>
                             </>
                         )}
                     </span>
                 </motion.button>
-
-                {/* Language Flags */}
-                <div className="flex items-center gap-4">
-                    {flags.map((f) => (
-                        <motion.button
-                            key={f.lang}
-                            whileHover={{ scale: 1.15 }}
-                            whileTap={{ scale: 0.9 }}
-                            onClick={() => setLanguage(f.lang)}
-                            className={`flex items-center gap-2 px-4 py-2 rounded-full text-sm font-bold transition-all duration-300 ${
-                                language === f.lang
-                                    ? 'bg-primary/20 border border-primary/40 text-primary shadow-lg shadow-primary/10'
-                                    : 'bg-white/5 border border-white/10 text-muted-foreground hover:text-white hover:bg-white/10'
-                            }`}
-                            title={f.label}
-                        >
-                            <span className="text-lg">{f.emoji}</span>
-                            <span className="hidden sm:inline text-xs">{f.label}</span>
-                        </motion.button>
-                    ))}
-                </div>
 
                 <AnimatePresence>
                     {!leftHand || !rightHand ? (
@@ -250,7 +224,7 @@ export default function HandScanner({ onAnalyze, isLoading, language, setLanguag
                             className="text-muted-foreground text-sm font-light tracking-wide flex items-center gap-2"
                         >
                             <AlertCircle size={14} />
-                            {t.uploadBoth}
+                            Sube ambas palmas para que la IA pueda contrastar tu energía
                         </motion.p>
                     ) : null}
                 </AnimatePresence>

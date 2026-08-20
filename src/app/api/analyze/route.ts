@@ -2,12 +2,6 @@ import { NextRequest, NextResponse } from 'next/server';
 
 export const maxDuration = 120;
 
-const LANGUAGE_NAMES: Record<string, string> = {
-    es: 'Spanish',
-    en: 'English',
-    fr: 'French',
-};
-
 const SYSTEM_PROMPT = `Actúa como el Gran Maestro Wang Chenxia (Diagnóstico por la mano) y Ken Wilber (Visión Integral).
 Tu tarea es hacer una DISECCIÓN VISUAL de estas manos (Izquierda=Ancestral/Yin, Derecha=Actual/Yang).
 
@@ -34,9 +28,6 @@ FORMATO JSON OBLIGATORIO (Responde SOLO esto, sin texto antes ni después, respe
     "ellos": { "titulo": "Entorno (Ellos)", "detalle": "Impacto social actual (Mano Der)." }
   }
 }`;
-
-const LANGUAGE_RULE = `
-⚠️ REGLA DE IDIOMA ESTRICTA: Todo el contenido del JSON de respuesta (mensaje_maestro, observacion_visual, organo_afectado, significado_mtc, y todos los campos de cuadrantes_integral) DEBE estar redactado ÚNICAMENTE en idioma {languageName}. NO uses español ni ningún otro idioma. Responde COMPLETAMENTE en {languageName}.`;
 
 function cleanJsonResponse(content: string): string {
     let cleaned = content.trim();
@@ -70,27 +61,27 @@ function validateAndFixDiagnosis(parsed: { [key: string]: unknown }): object | n
 }
 
 export async function POST(req: NextRequest) {
-    console.log('--- Iniciando Análisis Tao (Vía Groq Vision) ---');
+    console.log('--- Iniciando Análisis Tao (Vía OpenRouter) ---');
     try {
-        const { leftHand, rightHand, language = 'es' } = await req.json();
+        const { leftHand, rightHand } = await req.json();
 
         if (!leftHand || !rightHand) {
             return NextResponse.json({ error: 'Faltan las imágenes de las manos' }, { status: 400 });
         }
 
-        const groqApiKey = process.env.GROQ_API_KEY;
-        if (!groqApiKey) {
-            console.error('❌ Error: GROQ_API_KEY no encontrada en .env.local');
-            return NextResponse.json({ error: 'Llave de Groq no configurada' }, { status: 500 });
+        const openRouterKey = process.env.OPENROUTER_API_KEY;
+        if (!openRouterKey) {
+            console.error('❌ Error: OPENROUTER_API_KEY no encontrada en .env.local');
+            return NextResponse.json({ error: 'Llave de OpenRouter no configurada' }, { status: 500 });
         }
 
-        const languageName = LANGUAGE_NAMES[language] || 'Spanish';
-        const systemPromptWithLang = SYSTEM_PROMPT + LANGUAGE_RULE.replace(/{languageName}/g, languageName);
-
         const MODELS_TO_TRY = [
-            "qwen/qwen3.6-27b"
+            "google/gemma-4-26b-a4b-it:free",
+            "google/gemma-4-31b-it:free",
+            "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free",
+            "nvidia/nemotron-nano-12b-v2-vl:free"
         ];
-        const API_URL = 'https://api.groq.com/openai/v1/chat/completions';
+        const API_URL = 'https://openrouter.ai/api/v1/chat/completions';
 
         let contentText = "";
         let success = false;
@@ -103,16 +94,17 @@ export async function POST(req: NextRequest) {
                 const payload = {
                     model: model,
                     messages: [
+                        { role: "system", content: SYSTEM_PROMPT },
                         {
                             role: "user",
                             content: [
-                                { type: "text", text: systemPromptWithLang + "\n\n---\n\nAnaliza ambas manos (IZQUIERDA = energía ancestral/Yin, DERECHA = energía actual/Yang). Busca marcas físicas reales: lunares, manchas, venas, color de uñas, líneas. Responde ÚNICAMENTE con JSON válido." },
+                                { type: "text", text: "Analiza ambas manos (IZQUIERDA = energía ancestral/Yin, DERECHA = energía actual/Yang). Busca marcas físicas reales: lunares, manchas, venas, color de uñas, líneas. Responde ÚNICAMENTE con JSON válido." },
                                 { type: "image_url", image_url: { url: leftHand } },
                                 { type: "image_url", image_url: { url: rightHand } }
                             ]
                         }
                     ],
-                    temperature: 0.3,
+                    temperature: 0.5,
                     max_tokens: 1024
                 };
 
@@ -122,8 +114,10 @@ export async function POST(req: NextRequest) {
                 const response = await fetch(API_URL, {
                     method: 'POST',
                     headers: {
-                        'Authorization': `Bearer ${groqApiKey}`,
+                        'Authorization': `Bearer ${openRouterKey}`,
                         'Content-Type': 'application/json',
+                        'HTTP-Referer': 'https://tao-health-scanner.vercel.app',
+                        'X-Title': 'Tao Health Scanner'
                     },
                     body: JSON.stringify(payload),
                     signal: controller.signal
@@ -143,7 +137,7 @@ export async function POST(req: NextRequest) {
                 } else {
                     const errDetail = await response.text();
                     lastError = `Status ${response.status}: ${errDetail}`;
-                    console.warn(`⚠️ ${model} falló en Groq: ${lastError}`);
+                    console.warn(`⚠️ ${model} falló: ${lastError}`);
                 }
             } catch (err: any) {
                 lastError = err.message;
@@ -152,12 +146,12 @@ export async function POST(req: NextRequest) {
         }
 
         if (!success) {
-            throw new Error(`Los modelos de Groq fallaron o no respondieron. Último error: ${lastError}`);
+            throw new Error(`Todos los modelos de OpenRouter fallaron o no respondieron. Último error: ${lastError}`);
         }
 
         const parsed = parseJsonRobust(contentText);
         if (!parsed) {
-            console.error("❌ Groq no devolvió un JSON válido:", contentText);
+            console.error("❌ OpenRouter no devolvió un JSON válido:", contentText);
             throw new Error('Formato de diagnóstico inválido');
         }
 

@@ -2,12 +2,6 @@ import { NextRequest, NextResponse } from 'next/server';
 
 export const maxDuration = 60;
 
-const LANGUAGE_NAMES: Record<string, string> = {
-    es: 'Spanish',
-    en: 'English',
-    fr: 'French',
-};
-
 // Modelos de OpenRouter (prioridad: Gemma 4 26B primero)
 const OPENROUTER_MODELS = [
     'google/gemma-4-26b-a4b-it:free',
@@ -48,7 +42,7 @@ async function fetchWithTimeout(resource: string, options: any = {}, timeoutMs =
 export async function POST(req: NextRequest) {
     console.log('--- Iniciando Chat con Maestro Kong Nutrito ---');
     try {
-        const { message, diagnosis, history = [], language = 'es' } = await req.json();
+        const { message, diagnosis, history = [] } = await req.json();
         if (!message || !diagnosis) return NextResponse.json({ error: 'Faltan datos' }, { status: 400 });
 
         const groqKey = process.env.GROQ_API_KEY;
@@ -65,11 +59,9 @@ export async function POST(req: NextRequest) {
             }
         }
 
-        const languageName = LANGUAGE_NAMES[language] || 'Spanish';
         const systemPrompt = SYSTEM_PROMPT_TEMPLATE
             .replace('{organo_afectado}', organo_afectado)
-            .replace('{elemento_dominante}', elementoDominante)
-            + `\n\n⚠️ REGLA DE IDIOMA ESTRICTA: Responde COMPLETAMENTE en idioma ${languageName}. NO uses español ni ningún otro idioma.`;
+            .replace('{elemento_dominante}', elementoDominante);
 
         // 1. PRIMERO: OpenRouter con Gemma 4 26B (modelo preferido)
         if (openRouterKey) {
@@ -119,7 +111,7 @@ export async function POST(req: NextRequest) {
                         'Content-Type': 'application/json'
                     },
                     body: JSON.stringify({
-                        model: "openai/gpt-oss-120b",
+                        model: "llama-3.3-70b-versatile",
                         messages: [
                             { role: "system", content: systemPrompt },
                             ...history.map((m: any) => ({ role: m.role, content: m.content })),
