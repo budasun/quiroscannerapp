@@ -96,15 +96,68 @@ export async function POST(req: NextRequest) {
         let lastError = "";
         let modelUsed = "";
 
-        // 1. PRIMERO: OpenRouter con Gemini Vision
-        if (openRouterKey) {
+        // 1. PRIMERO: Groq con qwen/qwen3.6-27b (vision + JSON mode)
+        if (groqKey) {
+            console.log('📡 Intentando Groq (qwen/qwen3.6-27b)...');
+            try {
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 30000);
+
+                const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${groqKey}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        model: "qwen/qwen3.6-27b",
+                        messages: [
+                            {
+                                role: "user",
+                                content: [
+                                    { type: "text", text: visionPrompt },
+                                    { type: "image_url", image_url: { url: leftHand } },
+                                    { type: "image_url", image_url: { url: rightHand } }
+                                ]
+                            }
+                        ],
+                        temperature: 0.3,
+                        max_tokens: 1024,
+                        response_format: { type: "json_object" }
+                    }),
+                    signal: controller.signal
+                });
+
+                clearTimeout(timeoutId);
+
+                if (response.ok) {
+                    const data = await response.json() as any;
+                    contentText = data.choices?.[0]?.message?.content;
+                    if (contentText) {
+                        modelUsed = "Groq/qwen/qwen3.6-27b";
+                        success = true;
+                        console.log('✅ Éxito con Groq (qwen/qwen3.6-27b)');
+                    }
+                } else {
+                    const errDetail = await response.text();
+                    lastError = `Groq Status ${response.status}: ${errDetail}`;
+                    console.warn(`⚠️ Groq falló: ${lastError}`);
+                }
+            } catch (err: any) {
+                lastError = `Groq Error: ${err.message}`;
+                console.warn(`⚠️ Error de red/timeout con Groq: ${lastError}`);
+            }
+        }
+
+        // 2. RESPALDO: OpenRouter con Gemini Vision
+        if (!success && openRouterKey) {
             const OPENROUTER_MODELS = [
                 "google/gemini-2.5-flash",
                 "google/gemini-2.0-flash-001"
             ];
 
             for (const model of OPENROUTER_MODELS) {
-                console.log(`📡 Intentando OpenRouter con ${model}...`);
+                console.log(`🔄 Intentando respaldo OpenRouter con ${model}...`);
                 try {
                     const payload = {
                         model: model,
@@ -157,59 +210,6 @@ export async function POST(req: NextRequest) {
                     lastError = err.message;
                     console.warn(`⚠️ Error de red/timeout con ${model}: ${lastError}`);
                 }
-            }
-        }
-
-        // 2. RESPALDO: Groq con qwen/qwen3.6-27b (vision + JSON mode)
-        if (!success && groqKey) {
-            console.log('🔄 Intentando respaldo con Groq (qwen/qwen3.6-27b)...');
-            try {
-                const controller = new AbortController();
-                const timeoutId = setTimeout(() => controller.abort(), 30000);
-
-                const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-                    method: 'POST',
-                    headers: {
-                        'Authorization': `Bearer ${groqKey}`,
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({
-                        model: "qwen/qwen3.6-27b",
-                        messages: [
-                            {
-                                role: "user",
-                                content: [
-                                    { type: "text", text: visionPrompt },
-                                    { type: "image_url", image_url: { url: leftHand } },
-                                    { type: "image_url", image_url: { url: rightHand } }
-                                ]
-                            }
-                        ],
-                        temperature: 0.3,
-                        max_tokens: 1024,
-                        response_format: { type: "json_object" }
-                    }),
-                    signal: controller.signal
-                });
-
-                clearTimeout(timeoutId);
-
-                if (response.ok) {
-                    const data = await response.json() as any;
-                    contentText = data.choices?.[0]?.message?.content;
-                    if (contentText) {
-                        modelUsed = "Groq/qwen/qwen3.6-27b";
-                        success = true;
-                        console.log('✅ Éxito con Groq (qwen/qwen3.6-27b)');
-                    }
-                } else {
-                    const errDetail = await response.text();
-                    lastError = `Groq Status ${response.status}: ${errDetail}`;
-                    console.warn(`⚠️ Groq falló: ${lastError}`);
-                }
-            } catch (err: any) {
-                lastError = `Groq Error: ${err.message}`;
-                console.warn(`⚠️ Error de red/timeout con Groq: ${lastError}`);
             }
         }
 

@@ -71,10 +71,45 @@ export async function POST(req: NextRequest) {
             .replace('{elemento_dominante}', elementoDominante)
             + `\n\n⚠️ REGLA DE IDIOMA ESTRICTA: Responde COMPLETAMENTE en idioma ${languageName}. NO uses español ni ningún otro idioma.`;
 
-        // 1. PRIMERO: OpenRouter con Gemma 4 26B (modelo preferido)
+        // 1. PRIMERO: Groq con qwen/qwen3.6-27b
+        if (groqKey) {
+            console.log('📡 [Chat] Intentando Groq (qwen/qwen3.6-27b)...');
+            try {
+                const response = await fetchWithTimeout('https://api.groq.com/openai/v1/chat/completions', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${groqKey}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        model: "qwen/qwen3.6-27b",
+                        messages: [
+                            { role: "system", content: systemPrompt },
+                            ...history.map((m: any) => ({ role: m.role, content: m.content })),
+                            { role: "user", content: message }
+                        ],
+                        temperature: 0.7,
+                        max_tokens: 800
+                    })
+                }, 15000);
+
+                if (response.ok) {
+                    const data = await response.json();
+                    const content = data.choices?.[0]?.message?.content;
+                    if (content) {
+                        console.log('✅ Chat exitoso con Groq (qwen/qwen3.6-27b)');
+                        return NextResponse.json({ content });
+                    }
+                }
+            } catch (err: any) {
+                console.error('⚠️ Groq falló en Chat:', err.message);
+            }
+        }
+
+        // 2. RESPALDO: OpenRouter con Gemma 4
         if (openRouterKey) {
             for (const model of OPENROUTER_MODELS) {
-                console.log(`🚀 [Chat] Intentando OpenRouter con ${model}...`);
+                console.log(`🔄 [Chat] Intentando respaldo OpenRouter con ${model}...`);
                 try {
                     const response = await fetchWithTimeout('https://openrouter.ai/api/v1/chat/completions', {
                         method: 'POST',
@@ -105,41 +140,6 @@ export async function POST(req: NextRequest) {
                     console.error(`⚠️ ${model} falló en Chat`);
                     continue;
                 }
-            }
-        }
-
-        // 2. RESPALDO: Groq
-        if (groqKey) {
-            console.log('🔄 [Chat] Intentando respaldo con Groq...');
-            try {
-                const response = await fetchWithTimeout('https://api.groq.com/openai/v1/chat/completions', {
-                    method: 'POST',
-                    headers: {
-                        'Authorization': `Bearer ${groqKey}`,
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({
-                        model: "qwen/qwen3.6-27b",
-                        messages: [
-                            { role: "system", content: systemPrompt },
-                            ...history.map((m: any) => ({ role: m.role, content: m.content })),
-                            { role: "user", content: message }
-                        ],
-                        temperature: 0.7,
-                        max_tokens: 800
-                    })
-                }, 15000);
-
-                if (response.ok) {
-                    const data = await response.json();
-                    const content = data.choices?.[0]?.message?.content;
-                    if (content) {
-                        console.log('✅ Chat exitoso con Groq (respaldo)');
-                        return NextResponse.json({ content });
-                    }
-                }
-            } catch (err: any) {
-                console.error('⚠️ Groq falló en Chat');
             }
         }
 
