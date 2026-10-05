@@ -14,7 +14,7 @@ http://tao.octaviotrs.com
 ## 🛠️ Tech Stack
 - **Frontend:** React + TypeScript
 - **Estilos:** CSS / Tailwind
-- **Deploy:** Vercel (o la plataforma que uses)
+- **Deploy:** Vercel 
 
 ## 📦 Cómo correrlo localmente
 
